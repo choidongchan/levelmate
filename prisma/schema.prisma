@@ -1,0 +1,312 @@
+// 레벨메이트 데이터 모델
+//
+// 원칙
+// - 프로필 사진은 운영자가 넣지 않는다. 메이트 본인이 올리고, 검수를 통과한 것만 노출된다.
+// - 동행은 제휴 PC방에서만 이뤄진다. 예약은 항상 매장에 묶인다.
+// - 개인 연락처는 저장하되 상대에게 노출하지 않는다. 대화는 앱 안에서만.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7부터 접속 URL은 스키마가 아니라 prisma.config.ts 에서 지정한다.
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  MEMBER // 메이트를 찾는 이용자
+  MATE // 동행을 제공하는 메이트
+  ADMIN // 운영자
+}
+
+enum Game {
+  LOL
+  VALORANT
+  PUBG
+  FCONLINE
+  OVERWATCH
+}
+
+enum ProductType {
+  ONLINE_DUO // 온라인 듀오
+  COACHING // 게임 코칭
+  PCBANG // PC방 동행
+  PARTY // 5인 파티
+  TOURNAMENT // 대회 파트너
+}
+
+enum MateStatus {
+  DRAFT // 작성 중
+  REVIEWING // 심사 대기
+  ACTIVE // 노출 중
+  PAUSED // 본인이 잠시 내림
+  SUSPENDED // 운영자가 정지
+}
+
+enum PhotoStatus {
+  PENDING // 검수 대기 — 노출되지 않음
+  APPROVED // 노출 가능
+  REJECTED // 반려
+}
+
+enum BookingStatus {
+  PENDING // 예약 요청, 결제 전
+  PAID // 선결제 완료
+  CHECKED_IN // PC방 QR 체크인
+  COMPLETED // 동행 종료, 정산 대상
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  READY
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model User {
+  id       String @id @default(cuid())
+  nickname String @unique
+
+  // 휴대폰 본인인증 정보. phone은 해시로만 보관하고 원문은 PG/인증사에 맡긴다.
+  phoneHash  String    @unique
+  ci         String?   @unique // 본인확인기관 연계정보 (중복가입 차단용)
+  verifiedAt DateTime?
+  birthYear  Int? // 성인 확인
+
+  role      Role     @default(MEMBER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  bannedAt  DateTime?
+
+  mateProfile      MateProfile?
+  bookingsAsMember Booking[]    @relation("MemberBookings")
+  reviewsWritten   Review[]     @relation("ReviewAuthor")
+  photosReviewed   MatePhoto[]  @relation("PhotoReviewer")
+  reportsFiled     Report[]     @relation("Reporter")
+  reportsReceived  Report[]     @relation("ReportTarget")
+  blocksMade       Block[]      @relation("Blocker")
+  blocksReceived   Block[]      @relation("Blocked")
+  messages         Message[]
+
+  @@index([role])
+}
+
+model MateProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  status   MateStatus @default(DRAFT)
+  headline String // 한 줄 소개
+  bio      String     @db.Text
+  tier     String // "다이아 IV"
+  mainGame Game
+  games    Game[]
+
+  pricePerHour  Int // 원 단위
+  products      ProductType[]
+  availableFrom String // "13:00"
+  availableTo   String // "26:00" (새벽 2시)
+  region        String // "서울시 강남구"
+
+  online     Boolean   @default(false)
+  lastSeenAt DateTime?
+
+  // 집계값. 리뷰 생성 시 갱신한다.
+  ratingAvg    Float @default(0)
+  reviewCount  Int   @default(0)
+  responseRate Int   @default(100)
+
+  approvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  photos   MatePhoto[]
+  pcBangs  PcBang[]    @relation("MatePcBangs")
+  bookings Booking[]
+  reviews  Review[]
+
+  @@index([status, region])
+  @@index([status, mainGame])
+}
+
+/// 메이트가 직접 올린 프로필 사진. 검수를 통과한 것만 화면에 나간다.
+model MatePhoto {
+  id     String      @id @default(cuid())
+  mateId String
+  mate   MateProfile @relation(fields: [mateId], references: [id], onDelete: Cascade)
+
+  url         String // Vercel Blob URL
+  pathname    String // Blob 삭제용 경로
+  width       Int
+  height      Int
+  bytes       Int
+  blurDataUrl String? @db.Text
+
+  isPrimary Boolean     @default(false)
+  sortOrder Int         @default(0)
+  status    PhotoStatus @default(PENDING)
+
+  rejectedReason String?
+  reviewedById   String?
+  reviewedBy     User?     @relation("PhotoReviewer", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([mateId, status, sortOrder])
+  @@index([status]) // 검수 대기 목록
+}
+
+model PcBang {
+  id      String  @id @default(cuid())
+  name    String
+  address String
+  region  String
+  lat     Float?
+  lng     Float?
+  partner Boolean @default(true) // 제휴 매장 여부
+
+  createdAt DateTime @default(now())
+
+  mates    MateProfile[] @relation("MatePcBangs")
+  bookings Booking[]
+
+  @@index([region, partner])
+}
+
+model Booking {
+  id String @id @default(cuid())
+
+  memberId String
+  member   User   @relation("MemberBookings", fields: [memberId], references: [id])
+
+  mateId String
+  mate   MateProfile @relation(fields: [mateId], references: [id])
+
+  // 동행 상품은 PC방에 묶인다. 온라인 상품은 null.
+  pcBangId String?
+  pcBang   PcBang? @relation(fields: [pcBangId], references: [id])
+
+  product ProductType
+  startAt DateTime
+  hours   Int
+  amount  Int // 총 결제 금액(원)
+
+  status BookingStatus @default(PENDING)
+
+  // 매장에서 스캔하는 체크인 코드
+  checkInCode String?   @unique
+  checkedInAt DateTime?
+
+  completedAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  payment  Payment?
+  review   Review?
+  reports  Report[]
+  messages Message[]
+
+  @@index([memberId, status])
+  @@index([mateId, status])
+  @@index([startAt])
+}
+
+model Payment {
+  id        String  @id @default(cuid())
+  bookingId String  @unique
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  provider String // "toss" | "portone" 등
+  pgTid    String? @unique
+  amount   Int
+  status   PaymentStatus @default(READY)
+
+  paidAt       DateTime?
+  refundedAt   DateTime?
+  refundAmount Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  bookingId String  @unique // 실제 동행한 건에만 리뷰를 쓸 수 있다
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation("ReviewAuthor", fields: [authorId], references: [id])
+
+  mateId String
+  mate   MateProfile @relation(fields: [mateId], references: [id])
+
+  rating  Int // 1~5
+  comment String @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([mateId, createdAt])
+}
+
+/// 앱 내 대화. 개인 연락처를 주고받지 않게 하려는 장치라 예약에 묶는다.
+model Message {
+  id        String  @id @default(cuid())
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  body   String    @db.Text
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingId, createdAt])
+}
+
+model Report {
+  id String @id @default(cuid())
+
+  reporterId String
+  reporter   User   @relation("Reporter", fields: [reporterId], references: [id])
+
+  targetUserId String
+  targetUser   User   @relation("ReportTarget", fields: [targetUserId], references: [id])
+
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+
+  reason String // "노쇼" | "부적절한 언행" | "연락처 요구" 등
+  detail String? @db.Text
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+  resolution String?
+
+  @@index([targetUserId, createdAt])
+  @@index([resolvedAt])
+}
+
+model Block {
+  id String @id @default(cuid())
+
+  blockerId String
+  blocker   User   @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+
+  blockedId String
+  blocked   User   @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}

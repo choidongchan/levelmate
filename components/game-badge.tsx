@@ -1,4 +1,4 @@
-import { GAMES, type GameKey } from '@/lib/data'
+import { GAMES, type GameKey } from '@/lib/types'
 
 export function GameBadge({ game, size = 'sm' }: { game: GameKey; size?: 'sm' | 'md' }) {
   const g = GAMES[game]

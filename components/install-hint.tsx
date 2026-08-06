@@ -63,7 +63,7 @@ export function InstallHint() {
   if (standalone || justInstalled) return null
 
   return (
-    <section className="rounded-3xl border border-line bg-surface p-5">
+    <section className="glass rounded-3xl p-5">
       <div className="flex items-center gap-2">
         <Icon name="download" className="size-5 text-brand-bright" />
         <h2 className="text-sm font-bold">앱으로 설치하기</h2>

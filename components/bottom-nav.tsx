@@ -16,7 +16,7 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
       <div className="mx-auto max-w-md px-4">
         {/* 화면 폭을 꽉 채운 바 대신 떠 있는 알약 형태. 훨씬 가볍게 보인다. */}
         <div className="pointer-events-auto flex items-center justify-between rounded-full border border-white/10 bg-[#0d0d15]/85 px-2 py-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.55)] backdrop-blur-xl">

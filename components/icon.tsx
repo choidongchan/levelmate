@@ -45,6 +45,14 @@ const PATHS = {
   bolt: <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />,
   grid: <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h8v8h-8v-8Zm2 2v4h4v-4h-4Z" />,
   list: <path d="M3 5h4v4H3V5Zm6 1h12v2H9V6ZM3 10h4v4H3v-4Zm6 1h12v2H9v-2ZM3 15h4v4H3v-4Zm6 1h12v2H9v-2Z" />,
+  plus: <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6V5Z" />,
+  send: <path d="M3 3l18 9-18 9 4-9-4-9Zm3.5 4.3L8 11h7.6L6.5 7.3Zm0 9.4L15.6 13H8l-1.5 3.7Z" />,
+  logout: <path d="M10 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8v-2h8V5h-8V3Zm-.6 5.3 1.4 1.4L9.4 11H16v2H9.4l1.4 1.3-1.4 1.4L5.6 12l3.8-3.7Z" />,
+  won: <path d="M3 6h2.2l1.6 7.2L8.6 6h2.2l1.8 7.2L14.2 6h2.2l-2.3 12h-2.4L10 11.2 8.3 18H5.9L3.6 6H3Zm16 0h2v12h-2V6Z" />,
+  users: <path d="M9 4a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Zm8 .5a3 3 0 1 1 0 6 3 3 0 0 1 0-6ZM9 13c3.3 0 6 1.8 6 4v3H3v-3c0-2.2 2.7-4 6-4Zm0 2c-2.4 0-4 1.2-4 2v1h8v-1c0-.8-1.6-2-4-2Zm8-1c2.8 0 5 1.5 5 3.5V20h-5v-3c0-1.1-.5-2.1-1.4-2.9.4 0 .9-.1 1.4-.1Z" />,
+  trash: <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm2.1 2 .7 8h6.4l.7-8H8.1Z" />,
+  ban: <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 0 0-6.2 13.1L17.1 5.8A8 8 0 0 0 12 4Zm0 16a8 8 0 0 0 6.2-13.1L6.9 18.2A8 8 0 0 0 12 20Z" />,
+  refresh: <path d="M12 4a8 8 0 0 1 7.5 5.2l-1.9.7A6 6 0 0 0 6.5 9H10v2H3V4h2v2.6A8 8 0 0 1 12 4Zm7 9h2v7h-2v-2.6A8 8 0 0 1 4.5 14.8l1.9-.7A6 6 0 0 0 17.5 15H14v-2h5Z" />,
 } as const
 
 export type IconName = keyof typeof PATHS
