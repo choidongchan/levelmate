@@ -25,6 +25,15 @@ ok()  { printf '  \033[1;32m✓\033[0m %s\n' "$*"; }
 [[ $EUID -eq 0 ]] || { echo "sudo 로 실행해주세요"; exit 1; }
 cd "$APP_DIR"
 
+# Prisma 7 은 Node 22 이상을 요구한다. 낮으면 올린다.
+if [[ $(node -v | sed 's/v\([0-9]*\).*/\1/') -lt 22 ]]; then
+  log "Node 22 로 올리는 중"
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
+  apt-get install -y nodejs >/dev/null
+  rm -rf "$APP_DIR/node_modules"   # 런타임이 바뀌었으니 네이티브 모듈을 다시 만든다
+  ok "node $(node -v)"
+fi
+
 log "코드 받기"
 LOCK_BEFORE=$(sha1sum package-lock.json 2>/dev/null | cut -c1-40 || echo none)
 sudo -u "$APP_USER" git fetch --depth 50 origin main   # 되돌리기용으로 최근 기록을 남긴다
