@@ -34,3 +34,7 @@ yarn-error.log*
 
 # 배포 고정 표시 (서버에서만 생김)
 .deploy-pin
+
+# 빌드 임시/직전 산출물
+.next-building/
+.next-previous/

@@ -75,8 +75,15 @@ ok "코드 전환"
 log "설치"
 sudo -u "$APP_USER" nice -n 19 ionice -c3 npm ci
 
+# 실행 중인 빌드를 건드리지 않고 다른 곳에 빌드한 뒤 교체한다
 log "빌드"
-sudo -u "$APP_USER" nice -n 19 ionice -c3 npm run build
+sudo -u "$APP_USER" rm -rf .next-building
+sudo -u "$APP_USER" env NEXT_DIST_DIR=.next-building nice -n 19 ionice -c3 npm run build
+
+log "교체"
+sudo -u "$APP_USER" rm -rf .next-previous
+[[ -d .next ]] && sudo -u "$APP_USER" mv .next .next-previous
+sudo -u "$APP_USER" mv .next-building .next
 
 log "재시작"
 sudo -u "$APP_USER" pm2 reload "$APP" --update-env
