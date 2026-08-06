@@ -40,6 +40,15 @@ REMOTE=$(sudo -u "$APP_USER" git ls-remote origin refs/heads/main 2>/dev/null | 
   echo "[$(date '+%F %T')] 새 커밋 ${LOCAL:0:7} → ${REMOTE:0:7}"
 } >> "$LOG"
 
+# 배포 스크립트 자체가 바뀌었을 수 있으므로 코드를 먼저 받는다.
+# 이 순서가 아니면 옛 스크립트로 배포하게 되고, 스크립트 수정이 영영
+# 적용되지 않는다. (update.sh 안의 pull 은 그대로 두어도 무해하다)
+if ! sudo -u "$APP_USER" git fetch -q --depth 50 origin main >> "$LOG" 2>&1 \
+  || ! sudo -u "$APP_USER" git reset --hard -q "$REMOTE" >> "$LOG" 2>&1; then
+  echo "[$(date '+%F %T')] ✗ 코드 받기 실패 — 이전 버전으로 계속 서비스 중" >> "$LOG"
+  exit 0
+fi
+
 if bash "$APP_DIR/deploy/update.sh" >> "$LOG" 2>&1; then
   echo "[$(date '+%F %T')] ✓ 배포 완료" >> "$LOG"
 else
