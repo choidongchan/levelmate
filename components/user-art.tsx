@@ -23,10 +23,20 @@ export function UserArt({
 }) {
   const [failed, setFailed] = useState(false)
   const showPhoto = user.photoUrl && user.photoStatus === 'APPROVED' && !failed
+  // 관리자가 브라우저에서 만든 사진은 data URL 이라 next/image 로 다룰 수 없다
+  const isData = user.photoUrl?.startsWith('data:')
 
   return (
     <div className={`relative overflow-hidden bg-surface ${className}`}>
-      {showPhoto ? (
+      {showPhoto && isData ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user.photoUrl!}
+          alt={`${user.nickname} 프로필 사진`}
+          className="size-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : showPhoto ? (
         <Image
           src={user.photoUrl!}
           alt={`${user.nickname} 프로필 사진`}

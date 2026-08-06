@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Icon } from './icon'
+import { PhotoPicker } from './photo-picker'
 import { deleteListing, toggleListing, updateListing, updateProfile } from '@/lib/store'
 import { PC_BANGS } from '@/lib/seed'
 import {
@@ -59,9 +60,23 @@ export function UserEditForm({ user, onDone }: { user: User; onDone: () => void 
         />
       </Field>
 
-      <Field label="프로필 사진 경로 (비워두면 캐릭터 아바타)">
+      <PhotoPicker
+        value={photoUrl || null}
+        nickname={nickname}
+        onPick={(dataUrl) => {
+          setPhotoUrl(dataUrl)
+          // 고른 즉시 반영되게 한다. 저장 버튼을 눌러야 반영되면 헷갈린다.
+          updateProfile(user.id, { photoUrl: dataUrl, photoStatus: 'APPROVED' })
+        }}
+        onClear={() => {
+          setPhotoUrl('')
+          updateProfile(user.id, { photoUrl: null, photoStatus: 'NONE' })
+        }}
+      />
+
+      <Field label="또는 사진 경로 직접 입력 (public/mates/ 에 올린 파일)">
         <input
-          value={photoUrl}
+          value={photoUrl.startsWith('data:') ? '' : photoUrl}
           onChange={(e) => setPhotoUrl(e.target.value)}
           placeholder="/mates/midking.jpg"
           className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
