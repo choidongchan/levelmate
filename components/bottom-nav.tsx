@@ -15,6 +15,10 @@ const TABS: { href: string; label: string; icon: IconName }[] = [
 export function BottomNav() {
   const pathname = usePathname()
 
+  // 관리자 콘솔은 자체 내비게이션을 쓴다
+  if (pathname.startsWith('/admin')) return null
+
+
   return (
     <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
       <div className="mx-auto max-w-md px-4">

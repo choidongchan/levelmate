@@ -21,6 +21,9 @@ export function SideNav() {
   const state = useStore()
   const me = currentUser(state)
 
+  // 관리자 콘솔은 자체 내비게이션을 쓴다
+  if (pathname.startsWith('/admin')) return null
+
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-1 border-r border-white/6 px-4 py-6 md:flex">
       <Link href="/" className="mb-6 flex items-center gap-2 px-2">
@@ -47,19 +50,6 @@ export function SideNav() {
           )
         })}
 
-        {me?.role === 'ADMIN' && (
-          <Link
-            href="/admin"
-            className={`flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm transition ${
-              pathname.startsWith('/admin')
-                ? 'bg-white/10 font-bold text-white'
-                : 'text-muted hover:bg-white/5'
-            }`}
-          >
-            <Icon name="shield" className="size-5 shrink-0" />
-            관리자
-          </Link>
-        )}
       </nav>
 
       <Link

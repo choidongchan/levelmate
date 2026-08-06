@@ -147,16 +147,6 @@ export default function MyPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-          {me.role === 'ADMIN' && (
-            <Link
-              href="/admin"
-              className="glass flex items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-bold transition hover:bg-white/8"
-            >
-              <Icon name="shield" className="size-4 text-brand-bright" />
-              관리자 페이지
-              <Icon name="chevronRight" className="ml-auto size-4 text-dim" />
-            </Link>
-          )}
 
           <button
             type="button"

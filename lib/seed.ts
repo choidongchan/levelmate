@@ -1,4 +1,4 @@
-import type { Booking, Listing, Message, Settlement, User } from './types'
+import type { AdminAccount, Booking, Listing, Message, Plan, Settlement, User } from './types'
 
 /**
  * 첫 실행 시 채워지는 예시 데이터.
@@ -373,4 +373,61 @@ export const PC_BANGS = [
   '레벨업 PC방 건대점',
   '레벨업 PC방 홍대점',
   '레벨업 PC방 분당서현점',
+]
+
+/** 요금제 — 아직 확정 전이라 뼈대만 잡아둔다. 관리자에서 바로 고칠 수 있다. */
+export const SEED_PLANS: Plan[] = [
+  {
+    id: 'p-free',
+    name: '무료',
+    target: 'MEMBER',
+    monthly: 0,
+    feeRate: 0.15,
+    features: ['글 올리기 무제한', '기본 검색', '앱 내 채팅'],
+    active: true,
+    note: '',
+  },
+  {
+    id: 'p-mate-basic',
+    name: '메이트 베이직',
+    target: 'MATE',
+    monthly: 0,
+    feeRate: 0.15,
+    features: ['수수료 15%', '기본 노출'],
+    active: true,
+    note: '기본 요금제',
+  },
+  {
+    id: 'p-mate-pro',
+    name: '메이트 프로',
+    target: 'MATE',
+    monthly: 9900,
+    feeRate: 0.1,
+    features: ['수수료 10%', '상단 노출', '프로필 강조', '통계 제공'],
+    active: false,
+    note: '검토 중',
+  },
+  {
+    id: 'p-pcbang',
+    name: '제휴 PC방',
+    target: 'PCBANG',
+    monthly: 49000,
+    feeRate: 0,
+    features: ['매장 노출', '체크인 연동', '이벤트 등록'],
+    active: false,
+    note: '요금 미확정',
+  },
+]
+
+export const SEED_ADMINS: AdminAccount[] = [
+  {
+    id: 'a-owner',
+    username: 'levelup',
+    password: 'levelup',
+    name: '최고 관리자',
+    owner: true,
+    active: true,
+    createdAt: '2026-07-01T09:00:00.000Z',
+    lastLoginAt: null,
+  },
 ]

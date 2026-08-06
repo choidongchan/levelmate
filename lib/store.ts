@@ -2,18 +2,22 @@
 
 import { useSyncExternalStore } from 'react'
 import {
+  SEED_ADMINS,
   SEED_BOOKINGS,
   SEED_LISTINGS,
   SEED_MESSAGES,
+  SEED_PLANS,
   SEED_SETTLEMENTS,
   SEED_USERS,
 } from './seed'
 import {
   FEE_RATE,
+  type AdminAccount,
   type Booking,
   type BookingStatus,
   type Listing,
   type Message,
+  type Plan,
   type Review,
   type Settlement,
   type User,
@@ -32,7 +36,10 @@ export type State = {
   messages: Message[]
   reviews: Review[]
   settlements: Settlement[]
+  plans: Plan[]
   sessionUserId: string | null
+  admins: AdminAccount[]
+  adminSessionId: string | null
 }
 
 const KEY = 'levelmate.v1'
@@ -45,7 +52,10 @@ function seedState(): State {
     messages: SEED_MESSAGES,
     reviews: [],
     settlements: SEED_SETTLEMENTS,
+    plans: SEED_PLANS,
     sessionUserId: null,
+    admins: SEED_ADMINS,
+    adminSessionId: null,
   }
 }
 
@@ -371,6 +381,67 @@ export function paySettlement(settlementId: string) {
       s.id === settlementId ? { ...s, status: 'PAID', paidAt: new Date().toISOString() } : s,
     ),
   })
+}
+
+// ─────────────────────────── 관리자 계정 ───────────────────────────
+
+export function adminLogin(username: string, password: string): AdminAccount | null {
+  const found = state.admins.find(
+    (a) => a.username === username.trim() && a.password === password && a.active,
+  )
+  if (!found) return null
+  set({
+    adminSessionId: found.id,
+    admins: state.admins.map((a) =>
+      a.id === found.id ? { ...a, lastLoginAt: new Date().toISOString() } : a,
+    ),
+  })
+  return found
+}
+
+export function adminLogout() {
+  set({ adminSessionId: null })
+}
+
+export function currentAdmin(s: State = state): AdminAccount | null {
+  if (!s.adminSessionId) return null
+  return s.admins.find((a) => a.id === s.adminSessionId) ?? null
+}
+
+export function createAdmin(input: { username: string; password: string; name: string }): string | null {
+  const username = input.username.trim()
+  if (!username || !input.password) return '아이디와 비밀번호를 입력해주세요'
+  if (state.admins.some((a) => a.username === username)) return '이미 있는 아이디입니다'
+
+  const admin: AdminAccount = {
+    id: id('a'),
+    username,
+    password: input.password,
+    name: input.name.trim() || username,
+    owner: false,
+    active: true,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null,
+  }
+  set({ admins: [...state.admins, admin] })
+  return null
+}
+
+export function updateAdmin(adminId: string, patch: Partial<AdminAccount>) {
+  set({ admins: state.admins.map((a) => (a.id === adminId ? { ...a, ...patch } : a)) })
+}
+
+export function deleteAdmin(adminId: string) {
+  const target = state.admins.find((a) => a.id === adminId)
+  if (!target || target.owner) return // 최고 관리자는 지울 수 없다
+  set({
+    admins: state.admins.filter((a) => a.id !== adminId),
+    adminSessionId: state.adminSessionId === adminId ? null : state.adminSessionId,
+  })
+}
+
+export function updatePlan(planId: string, patch: Partial<Plan>) {
+  set({ plans: state.plans.map((p) => (p.id === planId ? { ...p, ...patch } : p)) })
 }
 
 export function resetStore() {

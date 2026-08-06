@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Icon } from '@/components/icon'
-import { ListingCard } from '@/components/listing-card'
+import { MateRow } from '@/components/mate-row'
 import { ScreenHeader } from '@/components/screen-header'
 import { useStore } from '@/lib/store'
 import {
@@ -137,7 +137,15 @@ export default function SearchPage() {
             {results.map((l, i) => {
               const author = state.users.find((u) => u.id === l.userId)
               if (!author) return null
-              return <ListingCard key={l.id} listing={l} author={author} index={i} />
+              return (
+                <MateRow
+                  key={l.id}
+                  user={author}
+                  listing={l}
+                  index={i}
+                  href={`/listings/${l.id}`}
+                />
+              )
             })}
           </div>
         )}

@@ -216,3 +216,46 @@ export const PARTNER_BENEFITS = [
   '다양한 이벤트 참여',
   '대회 참가 신청',
 ]
+
+// ─────────── 요금제 ───────────
+
+export type PlanTarget = 'MEMBER' | 'MATE' | 'PCBANG'
+
+export const PLAN_TARGETS: Record<PlanTarget, string> = {
+  MEMBER: '이용자',
+  MATE: '메이트',
+  PCBANG: '제휴 PC방',
+}
+
+export type Plan = {
+  id: string
+  name: string
+  target: PlanTarget
+  /** 월 구독료. 0이면 무료 */
+  monthly: number
+  /** 이 요금제에 적용할 중개 수수료율 (0~1) */
+  feeRate: number
+  features: string[]
+  active: boolean
+  note: string
+}
+
+// ─────────── 관리자 계정 ───────────
+
+/**
+ * 관리자는 이용자와 완전히 분리된 계정으로 로그인한다.
+ *
+ * 지금은 브라우저 저장소에 두는 임시 구조라 비밀번호가 그대로 담긴다.
+ * 서버 인증(DB + 해시 + 세션 쿠키)을 붙이기 전까지는 실제 운영에 쓰면 안 된다.
+ */
+export type AdminAccount = {
+  id: string
+  username: string
+  password: string
+  name: string
+  /** 최고 관리자는 삭제할 수 없다 */
+  owner: boolean
+  active: boolean
+  createdAt: string
+  lastLoginAt: string | null
+}

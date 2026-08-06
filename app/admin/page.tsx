@@ -1,434 +1,192 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
-import { PromiseBadge } from '@/components/badges'
+import { useMemo } from 'react'
+import { BarRow, PageTitle, Panel, StatCard, Tag } from '@/components/admin-ui'
 import { Icon } from '@/components/icon'
-import { ListingEditForm, UserEditForm } from '@/components/admin-forms'
-import { LoginRequired } from '@/components/login-required'
-import { ScreenHeader } from '@/components/screen-header'
 import { UserArt } from '@/components/user-art'
 import { won } from '@/lib/format'
-import {
-  banUser,
-  currentUser,
-  deleteUser,
-  generateSettlements,
-  paySettlement,
-  useStore,
-  verifyUser,
-} from '@/lib/store'
-import { FEE_RATE, GAMES, LISTING_KINDS, MEET_MODES, type User } from '@/lib/types'
+import { useStore } from '@/lib/store'
+import { BOOKING_STATUS, FEE_RATE } from '@/lib/types'
 
-const TABS = [
-  { key: 'overview', label: '현황' },
-  { key: 'users', label: '회원 관리' },
-  { key: 'listings', label: '글 관리' },
-  { key: 'settlements', label: '정산' },
-] as const
+export default function AdminDashboard() {
+  const s = useStore()
 
-type TabKey = (typeof TABS)[number]['key']
+  const m = useMemo(() => {
+    const done = s.bookings.filter((b) => b.status === 'COMPLETED')
+    const gross = done.reduce((sum, b) => sum + b.amount, 0)
+    const region = new Map<string, number>()
+    for (const l of s.listings) region.set(l.region, (region.get(l.region) ?? 0) + 1)
 
-export default function AdminPage() {
-  const state = useStore()
-  const me = currentUser(state)
-  const [tab, setTab] = useState<TabKey>('overview')
+    return {
+      users: s.users.length,
+      unverified: s.users.filter((u) => !u.verified).length,
+      banned: s.users.filter((u) => u.bannedAt).length,
+      listings: s.listings.filter((l) => l.active).length,
+      hidden: s.listings.filter((l) => !l.active).length,
+      bookings: s.bookings.length,
+      pending: s.bookings.filter((b) => b.status === 'REQUESTED').length,
+      noShow: s.bookings.filter((b) => b.status === 'NO_SHOW').length,
+      gross,
+      fee: Math.round(gross * FEE_RATE),
+      unsettled: s.bookings.filter((b) => b.status === 'COMPLETED' && !b.settled && b.amount > 0).length,
+      regions: [...region.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6),
+    }
+  }, [s])
 
-  if (!me) {
-    return (
-      <>
-        <ScreenHeader title="관리자" />
-        <LoginRequired next="/admin" desc="관리자 계정으로 로그인해주세요" />
-      </>
-    )
-  }
+  const recent = [...s.bookings]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 6)
 
-  if (me.role !== 'ADMIN') {
-    return (
-      <>
-        <ScreenHeader title="관리자" />
-        <main className="flex flex-1 flex-col items-center justify-center gap-3 px-10 text-center">
-          <span className="glass grid size-16 place-items-center rounded-3xl">
-            <Icon name="ban" className="size-7 text-[#f43f5e]" />
-          </span>
-          <p className="mt-1 text-[15px] font-bold">접근 권한이 없어요</p>
-          <p className="text-xs leading-relaxed text-dim">
-            관리자 계정으로 로그인하면 이 페이지를 볼 수 있습니다.
-            <br />
-            (예시 데이터의 관리자 번호: 010-0000-0000)
-          </p>
-        </main>
-      </>
-    )
-  }
+  const newUsers = [...s.users]
+    .filter((u) => u.role !== 'ADMIN')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 5)
 
   return (
     <>
-      <ScreenHeader title="관리자" />
+      <PageTitle title="대시보드" desc="오늘의 운영 현황" />
 
-      <main className="flex flex-col gap-4 px-5 pt-1">
-        <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
-              className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-                tab === t.key ? 'bg-white text-ink' : 'bg-white/5 text-muted hover:text-white'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="누적 거래액" value={won(m.gross)} icon="won" tone="brand" />
+        <StatCard label={`수수료 (${Math.round(FEE_RATE * 100)}%)`} value={won(m.fee)} icon="chart" />
+        <StatCard label="전체 회원" value={`${m.users}명`} sub={`미인증 ${m.unverified} · 정지 ${m.banned}`} icon="users" />
+        <StatCard label="활성 글" value={`${m.listings}개`} sub={`숨김 ${m.hidden}`} icon="list" />
+      </div>
 
-        {tab === 'overview' && <Overview />}
-        {tab === 'users' && <Users meId={me.id} />}
-        {tab === 'listings' && <Listings />}
-        {tab === 'settlements' && <Settlements />}
-      </main>
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="전체 예약" value={`${m.bookings}건`} icon="calendar" />
+        <StatCard label="수락 대기" value={`${m.pending}건`} tone={m.pending > 0 ? 'warn' : undefined} />
+        <StatCard label="노쇼" value={`${m.noShow}건`} tone={m.noShow > 0 ? 'bad' : undefined} />
+        <StatCard label="정산 대기" value={`${m.unsettled}건`} tone={m.unsettled > 0 ? 'warn' : undefined} />
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <Panel
+          title="최근 예약"
+          action={
+            <Link href="/admin/bookings" className="text-[11px] text-dim hover:text-muted">
+              전체보기
+            </Link>
+          }
+        >
+          {recent.length === 0 ? (
+            <p className="py-8 text-center text-xs text-dim">예약이 없습니다</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-line">
+              {recent.map((b) => {
+                const st = BOOKING_STATUS[b.status]
+                const listing = s.listings.find((l) => l.id === b.listingId)
+                return (
+                  <li key={b.id} className="flex items-center gap-2 py-2.5">
+                    <Tag color={st.color}>{st.label}</Tag>
+                    <span className="min-w-0 flex-1 truncate text-xs">
+                      {listing?.title ?? '삭제된 글'}
+                    </span>
+                    <span className="shrink-0 text-xs font-bold">
+                      {b.amount === 0 ? '무료' : won(b.amount)}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel
+          title="신규 회원"
+          action={
+            <Link href="/admin/users" className="text-[11px] text-dim hover:text-muted">
+              전체보기
+            </Link>
+          }
+        >
+          {newUsers.length === 0 ? (
+            <p className="py-8 text-center text-xs text-dim">회원이 없습니다</p>
+          ) : (
+            <ul className="flex flex-col divide-y divide-line">
+              {newUsers.map((u) => (
+                <li key={u.id} className="flex items-center gap-2.5 py-2.5">
+                  <UserArt user={u} className="size-8 shrink-0 rounded-lg" sizes="32px" />
+                  <Link
+                    href={`/admin/users?q=${encodeURIComponent(u.nickname)}`}
+                    className="min-w-0 flex-1 truncate text-xs font-semibold hover:underline"
+                  >
+                    {u.nickname}
+                  </Link>
+                  {!u.verified && <Tag color="#fbbf24">미인증</Tag>}
+                  <span className="shrink-0 text-[10px] text-dim">
+                    {new Date(u.createdAt).toLocaleDateString('ko-KR')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel
+          title="지역별 글"
+          action={
+            <Link href="/admin/stats" className="text-[11px] text-dim hover:text-muted">
+              통계 전체
+            </Link>
+          }
+        >
+          {m.regions.length === 0 ? (
+            <p className="py-8 text-center text-xs text-dim">데이터가 없습니다</p>
+          ) : (
+            <ul>
+              {m.regions.map(([r, c]) => (
+                <BarRow key={r} label={r} value={c} max={m.regions[0][1]} suffix="개" />
+              ))}
+            </ul>
+          )}
+        </Panel>
+
+        <Panel title="처리할 일">
+          <ul className="flex flex-col gap-2">
+            <TodoRow
+              label="수락 대기 예약"
+              count={m.pending}
+              href="/admin/bookings"
+              icon="calendar"
+            />
+            <TodoRow label="미인증 회원" count={m.unverified} href="/admin/users" icon="id" />
+            <TodoRow label="정산 대기" count={m.unsettled} href="/admin/settlements" icon="won" />
+            <TodoRow label="정지된 회원" count={m.banned} href="/admin/users" icon="ban" />
+          </ul>
+        </Panel>
+      </div>
     </>
   )
 }
 
-function Overview() {
-  const state = useStore()
-
-  const stats = useMemo(() => {
-    const paid = state.bookings.filter((b) => b.status === 'COMPLETED' && b.amount > 0)
-    const gross = paid.reduce((s, b) => s + b.amount, 0)
-    return {
-      users: state.users.length,
-      unverified: state.users.filter((u) => !u.verified).length,
-      listings: state.listings.filter((l) => l.active).length,
-      bookings: state.bookings.length,
-      pending: state.bookings.filter((b) => b.status === 'REQUESTED').length,
-      gross,
-      fee: Math.round(gross * FEE_RATE),
-      unsettled: state.bookings.filter(
-        (b) => b.status === 'COMPLETED' && !b.settled && b.amount > 0,
-      ).length,
-    }
-  }, [state])
-
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <Stat label="전체 회원" value={`${stats.users}명`} sub={`미인증 ${stats.unverified}`} />
-      <Stat label="활성 글" value={`${stats.listings}개`} />
-      <Stat label="전체 예약" value={`${stats.bookings}건`} sub={`수락 대기 ${stats.pending}`} />
-      <Stat label="정산 대기" value={`${stats.unsettled}건`} />
-      <Stat label="누적 거래액" value={won(stats.gross)} highlight />
-      <Stat label={`플랫폼 수수료 (${Math.round(FEE_RATE * 100)}%)`} value={won(stats.fee)} />
-    </div>
-  )
-}
-
-function Stat({
+function TodoRow({
   label,
-  value,
-  sub,
-  highlight,
+  count,
+  href,
+  icon,
 }: {
   label: string
-  value: string
-  sub?: string
-  highlight?: boolean
+  count: number
+  href: string
+  icon: 'calendar' | 'id' | 'won' | 'ban'
 }) {
   return (
-    <div className="glass rounded-3xl px-4 py-3.5">
-      <p className="text-[11px] text-dim">{label}</p>
-      <p className={`mt-1 text-lg font-black tracking-tight ${highlight ? 'gradient-text' : ''}`}>
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-[10px] text-dim">{sub}</p>}
-    </div>
-  )
-}
-
-function Users({ meId }: { meId: string }) {
-  const state = useStore()
-  const [q, setQ] = useState('')
-
-  const users = state.users.filter(
-    (u) => u.nickname.includes(q.trim()) || u.phone.includes(q.trim()),
-  )
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="glass flex items-center gap-2.5 rounded-full px-4 py-3">
-        <Icon name="search" className="size-4 shrink-0 text-dim" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="닉네임 또는 번호로 검색"
-          className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
-        />
-      </div>
-
-      <p className="px-1 text-xs text-dim">{users.length}명</p>
-
-      <div className="grid gap-2.5 md:grid-cols-2">
-        {users.map((u) => (
-          <UserRow key={u.id} user={u} isSelf={u.id === meId} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
-  const [editing, setEditing] = useState(false)
-
-  return (
-    <div className="glass rounded-3xl p-4">
-      <div className="flex items-center gap-3">
-        <UserArt user={user} className="size-11 shrink-0 rounded-2xl" sizes="44px" />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
-            <Link href={`/users/${user.id}`} className="truncate text-sm font-bold hover:underline">
-              {user.nickname}
-            </Link>
-            {user.role === 'ADMIN' && (
-              <span className="rounded-full bg-brand/20 px-1.5 py-0.5 text-[9px] font-bold text-brand-bright">
-                운영자
-              </span>
-            )}
-            {user.bannedAt && (
-              <span className="rounded-full bg-[#f43f5e]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#f43f5e]">
-                정지
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 truncate text-[11px] text-dim">
-            {user.phone} · {user.region}
-          </p>
-        </div>
-        <PromiseBadge user={user} />
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-white/6 pt-3">
-        <span
-          className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
-            user.verified ? 'bg-online/20 text-online' : 'bg-white/8 text-dim'
-          }`}
-        >
-          {user.verified ? '본인인증 완료' : '미인증'}
+    <li>
+      <Link
+        href={href}
+        className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition ${
+          count > 0 ? 'bg-white/5 hover:bg-white/8' : 'opacity-45'
+        }`}
+      >
+        <Icon name={icon} className="size-4 shrink-0 text-dim" />
+        <span className="flex-1 text-xs">{label}</span>
+        <span className={`text-sm font-black ${count > 0 ? 'text-brand-bright' : 'text-dim'}`}>
+          {count}
         </span>
-
-        <div className="ml-auto flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setEditing((v) => !v)}
-            className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
-          >
-            {editing ? '닫기' : '수정'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => verifyUser(user.id, !user.verified)}
-            className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
-          >
-            {user.verified ? '인증 해제' : '인증 처리'}
-          </button>
-
-          {!isSelf && (
-            <>
-              <button
-                type="button"
-                onClick={() => banUser(user.id, !user.bannedAt)}
-                className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
-              >
-                {user.bannedAt ? '정지 해제' : '정지'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    confirm(
-                      `${user.nickname} 회원을 삭제할까요?\n올린 글·예약·대화도 함께 지워집니다.`,
-                    )
-                  ) {
-                    deleteUser(user.id)
-                  }
-                }}
-                aria-label="회원 삭제"
-                className="grid size-7 place-items-center rounded-full bg-[#f43f5e]/15 text-[#f43f5e] transition hover:bg-[#f43f5e]/25"
-              >
-                <Icon name="trash" className="size-3.5" />
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {editing && <UserEditForm user={user} onDone={() => setEditing(false)} />}
-    </div>
-  )
-}
-
-function Listings() {
-  const state = useStore()
-  const [q, setQ] = useState('')
-  const [openId, setOpenId] = useState<string | null>(null)
-
-  const listings = state.listings
-    .filter((l) => l.title.includes(q.trim()) || l.tier.includes(q.trim()))
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-
-  return (
-    <div className="flex flex-col gap-2.5">
-      <div className="glass flex items-center gap-2.5 rounded-full px-4 py-3">
-        <Icon name="search" className="size-4 shrink-0 text-dim" />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="제목 또는 티어로 검색"
-          className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
-        />
-      </div>
-
-      <p className="px-1 text-xs text-dim">{listings.length}개</p>
-
-      <div className="grid gap-2.5 md:grid-cols-2">
-        {listings.map((l) => {
-          const author = state.users.find((u) => u.id === l.userId)
-          const kind = LISTING_KINDS[l.kind]
-          return (
-            <div key={l.id} className="glass rounded-3xl p-4">
-              <div className="flex items-center gap-2">
-                <span
-                  className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                  style={{ color: kind.color, background: `${kind.color}1a` }}
-                >
-                  {kind.label}
-                </span>
-                <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-muted">
-                  {MEET_MODES[l.meetMode].short}
-                </span>
-                {!l.active && (
-                  <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-dim">
-                    숨김
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setOpenId(openId === l.id ? null : l.id)}
-                  className="ml-auto shrink-0 rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
-                >
-                  {openId === l.id ? '닫기' : '수정'}
-                </button>
-              </div>
-
-              <p className="mt-2 truncate text-sm font-bold">{l.title}</p>
-              <p className="mt-1 truncate text-[11px] text-dim">
-                {author?.nickname ?? '삭제된 회원'} · {GAMES[l.mainGame].short} {l.tier} ·{' '}
-                {l.region} · {l.pricePerHour === 0 ? '무료' : `${l.pricePerHour.toLocaleString()}원/시간`}
-              </p>
-
-              {openId === l.id && (
-                <ListingEditForm listing={l} onDone={() => setOpenId(null)} />
-              )}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function Settlements() {
-  const state = useStore()
-  const [msg, setMsg] = useState('')
-
-  const pendingCount = state.bookings.filter(
-    (b) => b.status === 'COMPLETED' && !b.settled && b.amount > 0,
-  ).length
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="glass flex items-center gap-3 rounded-3xl p-4">
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">정산 생성</p>
-          <p className="mt-0.5 text-[11px] text-dim">
-            완료된 유료 예약 {pendingCount}건이 정산 대기 중이에요
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={pendingCount === 0}
-          onClick={() => {
-            const n = generateSettlements()
-            setMsg(n > 0 ? `정산 ${n}건을 만들었어요` : '정산할 건이 없어요')
-          }}
-          className="cta shrink-0 rounded-full px-4 py-2 text-xs font-black transition disabled:opacity-40"
-        >
-          정산 만들기
-        </button>
-      </div>
-
-      {msg && <p className="px-1 text-xs text-brand-bright">{msg}</p>}
-
-      {state.settlements.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-16 text-center">
-          <span className="glass grid size-14 place-items-center rounded-2xl">
-            <Icon name="won" className="size-6 text-dim" />
-          </span>
-          <p className="mt-1 text-sm font-semibold">정산 내역이 없어요</p>
-        </div>
-      ) : (
-        <div className="grid gap-2.5 md:grid-cols-2">
-          {state.settlements.map((s) => {
-            const host = state.users.find((u) => u.id === s.hostId)
-            return (
-              <div key={s.id} className="glass rounded-3xl p-4">
-                <div className="flex items-center gap-2">
-                  {host && <UserArt user={host} className="size-8 rounded-full" sizes="32px" />}
-                  <span className="truncate text-sm font-bold">{host?.nickname ?? '삭제된 회원'}</span>
-                  <span
-                    className={`ml-auto rounded-full px-2.5 py-1 text-[10px] font-bold ${
-                      s.status === 'PAID'
-                        ? 'bg-online/20 text-online'
-                        : 'bg-[#fbbf24]/20 text-[#fbbf24]'
-                    }`}
-                  >
-                    {s.status === 'PAID' ? '지급 완료' : '지급 대기'}
-                  </span>
-                </div>
-
-                <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-                  <Cell label="거래액" value={won(s.gross)} />
-                  <Cell label={`수수료 ${Math.round(FEE_RATE * 100)}%`} value={`-${won(s.fee)}`} />
-                  <Cell label="지급액" value={won(s.net)} strong />
-                </dl>
-
-                <p className="mt-2 text-[10px] text-dim">
-                  예약 {s.bookingIds.length}건 · {new Date(s.createdAt).toLocaleDateString('ko-KR')}
-                </p>
-
-                {s.status === 'PENDING' && (
-                  <button
-                    type="button"
-                    onClick={() => paySettlement(s.id)}
-                    className="cta mt-3 w-full rounded-full py-2.5 text-xs font-black"
-                  >
-                    지급 처리
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function Cell({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className="rounded-2xl bg-white/4 py-2.5">
-      <dd className={`text-[13px] font-black ${strong ? 'text-brand-bright' : ''}`}>{value}</dd>
-      <dt className="mt-0.5 text-[10px] text-dim">{label}</dt>
-    </div>
+        <Icon name="chevronRight" className="size-3.5 text-dim" />
+      </Link>
+    </li>
   )
 }

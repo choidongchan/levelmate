@@ -15,16 +15,19 @@ export function MateRow({
   user,
   listing,
   index = 0,
+  href,
 }: {
   user: User
   listing: Listing
   index?: number
+  /** 기본은 메이트 프로필. 검색처럼 글이 주인공인 곳에서는 글로 보낸다 */
+  href?: string
 }) {
   const rating = ratingAvg(user)
 
   return (
     <Link
-      href={`/users/${user.id}`}
+      href={href ?? `/users/${user.id}`}
       className="rise flex items-stretch gap-3 overflow-hidden rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99] md:flex-col md:gap-0 md:p-0"
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
