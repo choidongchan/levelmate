@@ -8,7 +8,7 @@ import { InstallHint } from '@/components/install-hint'
 import { Logo } from '@/components/logo'
 import { MateRow } from '@/components/mate-row'
 import { UserArt } from '@/components/user-art'
-import { currentUser, useStore } from '@/lib/store'
+import { currentUser, logout, useStore } from '@/lib/store'
 import {
   HOW_TO_STEPS,
   LISTING_KINDS,
@@ -60,9 +60,19 @@ export default function HomePage() {
               <Icon name="search" className="size-5" />
             </Link>
             {me ? (
-              <Link href="/my" aria-label="마이">
-                <UserArt user={me} className="size-8 rounded-full" sizes="32px" />
-              </Link>
+              <>
+                <Link href="/my" aria-label="마이">
+                  <UserArt user={me} className="size-8 rounded-full" sizes="32px" />
+                </Link>
+                <button
+                  type="button"
+                  onClick={logout}
+                  aria-label="로그아웃"
+                  className="grid size-9 place-items-center rounded-full text-dim transition hover:bg-white/8 hover:text-white"
+                >
+                  <Icon name="logout" className="size-[18px]" />
+                </button>
+              </>
             ) : (
               <Link
                 href="/login"

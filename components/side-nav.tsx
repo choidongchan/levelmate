@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Icon, type IconName } from './icon'
 import { Logo } from './logo'
 import { UserArt } from './user-art'
-import { currentUser, useStore } from '@/lib/store'
+import { currentUser, logout, useStore } from '@/lib/store'
 
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: '/', label: '홈', icon: 'home' },
@@ -72,16 +72,27 @@ export function SideNav() {
 
       <div className="mt-auto">
         {me ? (
-          <Link
-            href="/my"
-            className="flex items-center gap-2.5 rounded-2xl px-2 py-2 transition hover:bg-white/5"
-          >
-            <UserArt user={me} className="size-9 shrink-0 rounded-full" sizes="36px" />
-            <div className="min-w-0">
-              <p className="truncate text-sm font-bold">{me.nickname}</p>
-              <p className="truncate text-[11px] text-dim">{me.region}</p>
-            </div>
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              href="/my"
+              className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-2 py-2 transition hover:bg-white/5"
+            >
+              <UserArt user={me} className="size-9 shrink-0 rounded-full" sizes="36px" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold">{me.nickname}</p>
+                <p className="truncate text-[11px] text-dim">{me.region}</p>
+              </div>
+            </Link>
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="로그아웃"
+              title="로그아웃"
+              className="grid size-9 shrink-0 place-items-center rounded-full text-dim transition hover:bg-white/8 hover:text-white"
+            >
+              <Icon name="logout" className="size-[18px]" />
+            </button>
+          </div>
         ) : (
           <Link
             href="/login"
