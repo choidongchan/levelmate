@@ -1,6 +1,7 @@
 import { db } from '../db'
 import { EMPTY_STATE, type State } from '../state'
 import { readViewer, type Viewer } from './auth'
+import { buildId } from './build'
 import {
   toAdmin,
   toBooking,
@@ -73,6 +74,7 @@ export async function buildSnapshot(viewer?: Viewer): Promise<State> {
     admins: adminRows.map(toAdmin),
     adminSessionId: adminId,
     loaded: true,
+    build: await buildId(),
   }
 }
 
@@ -88,7 +90,7 @@ export async function safeSnapshot(): Promise<State> {
     // 삼키면 빈 화면이 그대로 굳어버린다.
     if (isFrameworkSignal(err)) throw err
     console.error('[snapshot] 실패 — 빈 화면으로 내려보냅니다', err)
-    return EMPTY_STATE
+    return { ...EMPTY_STATE, build: await buildId() }
   }
 }
 

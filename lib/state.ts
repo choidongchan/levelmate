@@ -28,6 +28,8 @@ export type State = {
   adminSessionId: string | null
   /** 서버에서 받은 데이터인지. false 면 아직 비어 있는 화면이다. */
   loaded: boolean
+  /** 서버가 지금 돌리고 있는 빌드. 이게 바뀌면 화면이 낡은 것이다. */
+  build: string
 }
 
 /**
@@ -46,4 +48,5 @@ export const EMPTY_STATE: State = {
   admins: [],
   adminSessionId: null,
   loaded: false,
+  build: '',
 }

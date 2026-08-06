@@ -33,7 +33,30 @@ function emit() {
   for (const l of listeners) l()
 }
 
+/**
+ * 이 화면이 처음 열렸을 때 서버가 돌리고 있던 빌드.
+ *
+ * 화면을 켜둔 채로 새 버전이 배포되면 이 탭은 옛 코드를 그대로 들고 있게 된다.
+ * 그 상태에서는 나만 다른 것을 보게 되고, 본인 화면은 멀쩡해 보여서 알아채기가
+ * 아주 어렵다. 서버가 다른 빌드라고 알려주면 한 번 새로 불러온다.
+ */
+let openedWith: string | null = null
+let reloading = false
+
+function checkBuild(next: State) {
+  if (!next.build || typeof window === 'undefined') return false
+  if (openedWith === null) {
+    openedWith = next.build
+    return false
+  }
+  if (openedWith === next.build || reloading) return false
+  reloading = true
+  window.location.reload()
+  return true
+}
+
 function set(next: State) {
+  if (checkBuild(next)) return
   state = next
   emit()
 }
@@ -52,6 +75,7 @@ function subscribe(cb: () => void) {
 export function adoptInitialState(next: State) {
   if (typeof window === 'undefined') return
   if (state.loaded) return
+  if (next.build) openedWith = next.build
   state = next
 }
 
