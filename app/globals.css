@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+@theme {
+  /* 네트워크가 막힌 PC방에서도 즉시 뜨도록 웹폰트 대신 시스템 폰트만 쓴다.
+     Windows(PC방)는 Malgun Gothic, macOS/iOS는 Apple SD Gothic Neo로 떨어진다. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard',
+    'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', system-ui, sans-serif;
+
+  --color-ink: #07070b;
+  --color-surface: #13131c;
+  --color-surface-2: #1c1c28;
+  --color-surface-3: #262634;
+  --color-line: #2c2c3d;
+  --color-muted: #8c8ca6;
+  --color-dim: #5f5f78;
+
+  --color-brand: #8b5cf6;
+  --color-brand-bright: #a855f7;
+  --color-brand-deep: #5b21b6;
+
+  --color-online: #22c55e;
+  --color-star: #facc15;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: var(--color-ink);
+  color: #f2f2f7;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  /* 한글은 어절 단위로 끊어야 읽힌다. 없으면 '지역'이 '지/역'으로 쪼개진다. */
+  word-break: keep-all;
+  overscroll-behavior-y: none;
+}
+
+/* PC 전체화면에서 가운데 컬럼만 덩그러니 뜨지 않도록 은은한 배경을 깐다. */
+@media (min-width: 768px) {
+  body {
+    background:
+      radial-gradient(60rem 40rem at 50% -10%, rgb(139 92 246 / 0.14), transparent 70%),
+      var(--color-ink);
+  }
+}
+
+/* 가로 스크롤 영역의 스크롤바를 숨긴다 (모바일 느낌 유지) */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes lm-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgb(34 197 94 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
+  }
+}
+
+.online-dot {
+  animation: lm-pulse-ring 2s ease-out infinite;
+}
