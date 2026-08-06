@@ -188,7 +188,7 @@ export default function HomePage() {
         <div className="mx-auto flex max-w-md justify-end px-5">
           <Link
             href="/listings/new"
-            className="brand-gradient pointer-events-auto flex items-center gap-1.5 rounded-full px-4 py-3 text-sm font-bold shadow-[0_10px_30px_-6px] shadow-brand/70 transition active:scale-95"
+            className="cta pointer-events-auto flex items-center gap-1.5 rounded-full px-4 py-3 text-sm font-black transition active:scale-95"
           >
             <Icon name="plus" className="size-4" />
             글쓰기
@@ -207,11 +207,7 @@ function Hero() {
       {/* 도트 패턴 */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-25"
-        style={{
-          backgroundImage: 'radial-gradient(#ffffff 1px, transparent 1px)',
-          backgroundSize: '14px 14px',
-        }}
+        className="dots pointer-events-none absolute inset-0 opacity-25"
       />
 
       <div className="relative">
@@ -224,7 +220,7 @@ function Hero() {
         </p>
 
         {/* 말풍선 로고 */}
-        <div className="relative mx-auto mt-3 inline-block rounded-[1.6rem] border-4 border-white bg-[#1b1030] px-7 py-4">
+        <div className="sticker relative mx-auto mt-3 inline-block rounded-[1.6rem] bg-[#1b1030] px-7 py-4">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-white bg-[#f9a8d4] px-2.5 py-0.5 text-[10px] font-black text-[#831843]">
             한판?
           </span>
@@ -262,8 +258,7 @@ function Hero() {
 
         <Link
           href="/listings/new"
-          className="mt-3 flex items-center justify-center gap-1.5 rounded-full border-2 border-white/60 py-3 text-sm font-black text-white transition active:scale-[0.99]"
-          style={{ background: 'linear-gradient(90deg, #ec4899, #8b5cf6)' }}
+          className="cta mt-3 flex items-center justify-center gap-1.5 rounded-full py-3 text-sm font-black text-white transition active:scale-[0.99]"
         >
           지금 바로 <span className="text-[#fde047]">한판</span> 하러 가자!
           <Icon name="chevronRight" className="size-4" />

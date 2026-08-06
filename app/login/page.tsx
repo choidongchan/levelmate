@@ -64,7 +64,7 @@ function LoginScreen() {
                 setError('')
                 setStep('code')
               }}
-              className="brand-gradient rounded-2xl py-4 text-sm font-bold transition active:scale-[0.99] disabled:opacity-40"
+              className="cta rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"
             >
               인증번호 받기
             </button>
@@ -106,7 +106,7 @@ function LoginScreen() {
                   setError('로그인에 실패했어요. 다시 시도해주세요.')
                 }
               }}
-              className="brand-gradient rounded-2xl py-4 text-sm font-bold transition active:scale-[0.99] disabled:opacity-40"
+              className="cta rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"
             >
               인증하고 시작하기
             </button>

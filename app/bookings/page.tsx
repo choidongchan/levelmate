@@ -178,7 +178,7 @@ function BookingRow({
               className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
                 a.tone === 'danger'
                   ? 'bg-[#f43f5e]/15 text-[#f43f5e] hover:bg-[#f43f5e]/25'
-                  : 'brand-gradient'
+                  : 'cta'
               }`}
             >
               {a.label}

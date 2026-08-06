@@ -16,7 +16,7 @@ export function LoginRequired({ next, desc }: { next: string; desc: string }) {
       <button
         type="button"
         onClick={() => router.push(`/login?next=${encodeURIComponent(next)}`)}
-        className="brand-gradient mt-2 rounded-2xl px-5 py-3 text-sm font-bold"
+        className="cta mt-2 rounded-full px-5 py-3 text-sm font-black"
       >
         로그인하기
       </button>

@@ -276,7 +276,7 @@ function Settlements() {
             const n = generateSettlements()
             setMsg(n > 0 ? `정산 ${n}건을 만들었어요` : '정산할 건이 없어요')
           }}
-          className="brand-gradient shrink-0 rounded-full px-4 py-2 text-xs font-bold transition disabled:opacity-40"
+          className="cta shrink-0 rounded-full px-4 py-2 text-xs font-black transition disabled:opacity-40"
         >
           정산 만들기
         </button>
@@ -325,7 +325,7 @@ function Settlements() {
                   <button
                     type="button"
                     onClick={() => paySettlement(s.id)}
-                    className="brand-gradient mt-3 w-full rounded-2xl py-2.5 text-xs font-bold"
+                    className="cta mt-3 w-full rounded-full py-2.5 text-xs font-black"
                   >
                     지급 처리
                   </button>

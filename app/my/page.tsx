@@ -111,7 +111,7 @@ export default function MyPage() {
                   updateProfile(me.id, { nickname: nickname.trim() || me.nickname, intro, region })
                   setEditing(false)
                 }}
-                className="brand-gradient rounded-2xl py-3 text-sm font-bold"
+                className="cta rounded-full py-3 text-sm font-black"
               >
                 저장
               </button>

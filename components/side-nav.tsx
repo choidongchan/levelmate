@@ -64,7 +64,7 @@ export function SideNav() {
 
       <Link
         href="/listings/new"
-        className="brand-gradient mt-4 flex items-center justify-center gap-1.5 rounded-2xl py-3 text-sm font-bold transition active:scale-[0.99]"
+        className="cta mt-4 flex items-center justify-center gap-1.5 rounded-full py-3 text-sm font-black transition active:scale-[0.99]"
       >
         <Icon name="plus" className="size-4" />
         글쓰기

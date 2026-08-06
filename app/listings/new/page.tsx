@@ -49,7 +49,7 @@ export default function NewListingPage() {
           <button
             type="button"
             onClick={() => router.push('/login?next=/listings/new')}
-            className="brand-gradient mt-2 rounded-2xl px-5 py-3 text-sm font-bold"
+            className="cta mt-2 rounded-full px-5 py-3 text-sm font-black"
           >
             로그인하기
           </button>
@@ -267,7 +267,7 @@ export default function NewListingPage() {
             })
             router.replace(`/listings/${listing.id}`)
           }}
-          className="brand-gradient mt-2 rounded-2xl py-4 text-sm font-bold transition active:scale-[0.99] disabled:opacity-40"
+          className="cta mt-2 rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"
         >
           올리기
         </button>

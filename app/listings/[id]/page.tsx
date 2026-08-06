@@ -157,7 +157,7 @@ export default function ListingDetailPage() {
                 }
                 setBooking(true)
               }}
-              className="brand-gradient pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-4 text-[15px] font-bold shadow-[0_10px_30px_-6px] shadow-brand/70 transition active:scale-[0.99]"
+              className="cta pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-4 text-[15px] font-black transition active:scale-[0.99]"
             >
               {listing.kind === 'LEARN' ? '알려주겠다고 하기' : '신청하기'}
               <Icon name="arrowRight" className="size-4" />
@@ -308,7 +308,7 @@ function BookingSheet({
             onClick={() =>
               onSubmit({ startAt: new Date(`${date}T${time}`).toISOString(), hours, meetMode })
             }
-            className="brand-gradient rounded-2xl py-4 text-sm font-bold transition active:scale-[0.99] disabled:opacity-40"
+            className="cta rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"
           >
             신청 보내기
           </button>
