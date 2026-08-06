@@ -37,9 +37,10 @@ ok "사용 가능"
 # ── 1. 필요한 것만 설치 ───────────────────────────────────────────
 log "필요한 패키지 확인"
 
-if ! command -v node >/dev/null || [[ $(node -v | sed 's/v\([0-9]*\).*/\1/') -lt 20 ]]; then
-  echo "  Node 20 설치 중..."
-  curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+# Prisma 7 이 Node 22 이상을 요구한다.
+if ! command -v node >/dev/null || [[ $(node -v | sed 's/v\([0-9]*\).*/\1/') -lt 22 ]]; then
+  echo "  Node 22 설치 중..."
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y nodejs
 fi
 ok "node $(node -v)"
