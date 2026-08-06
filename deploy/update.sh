@@ -4,10 +4,13 @@
 #
 #   sudo bash /opt/hanpan/deploy/update.sh
 #
-# 하루에 몇 번씩 돌아도 사이트가 끊기지 않는다. 원칙은 하나다.
+# 하루에 몇 번씩 돌아도 사이트가 끊기지 않는다. 원칙은 셋이다.
 #
-#   돌고 있는 앱이 읽는 것(node_modules, .next)은 절대 그 자리에서 건드리지 않는다.
-#   옆에 새로 만들고, 다 만든 뒤에 통째로 바꿔 끼운다.
+#   1. 돌고 있는 앱이 읽는 것(node_modules, .next)은 절대 그 자리에서 건드리지 않는다.
+#      옆에 새로 만들고, 다 만든 뒤에 통째로 바꿔 끼운다.
+#   2. 한 번에 하나만 돈다. 자동 배포와 손으로 돌린 것이 겹치면 서로의 파일을
+#      지우다 깨진다.
+#   3. 바꿔 끼운 뒤 사이트가 응답하지 않으면 곧바로 되돌린다.
 #
 # 중간에 실패하면 아무것도 바꾸지 않는다. 돌던 버전이 그대로 서비스된다.
 #
@@ -16,16 +19,31 @@ set -euo pipefail
 APP=hanpan
 APP_DIR=/opt/$APP
 APP_USER=$APP
+LOCK=/var/lock/$APP-deploy.lock
 
 log() { printf '\n\033[1;35m▶ %s\033[0m\n' "$*"; }
 ok()  { printf '  \033[1;32m✓\033[0m %s\n' "$*"; }
+die() { printf '\n\033[1;31m✗ %s\033[0m\n\n' "$*"; exit 1; }
+
 # -H 를 붙여 HOME 을 그 계정의 것으로 맞춘다. 안 그러면 npm·prisma 가
 # root 의 홈에 캐시를 쓰려다 권한이 없어 실패한다.
 asuser() { sudo -u "$APP_USER" -H "$@"; }
 slow()   { sudo -u "$APP_USER" -H nice -n 19 ionice -c3 "$@"; }
 
-[[ $EUID -eq 0 ]] || { echo "sudo 로 실행해주세요"; exit 1; }
+# 지우고 옮기는 일은 전부 root 로 한다. 소유자가 어긋나 있어도 확실히 된다.
+# 만든 뒤에는 앱 계정에 넘긴다.
+wipe() { rm -rf -- "$1" 2>/dev/null || true; [[ -e $1 ]] && die "지우지 못했습니다: $1"; return 0; }
+
+[[ $EUID -eq 0 ]] || die "sudo 로 실행해주세요"
 cd "$APP_DIR"
+
+# ── 한 번에 하나만 ────────────────────────────────────────────────
+# 자동 배포는 1분마다 돈다. 손으로 돌린 것과 겹치면 같은 폴더를 동시에
+# 지우고 만들다가 'fts_read failed' 같은 것으로 깨진다.
+exec 9>"$LOCK"
+if ! flock -w 900 9; then
+  die "다른 배포가 15분 넘게 돌고 있습니다. 잠시 뒤 다시 시도해주세요."
+fi
 
 # ── Node ──────────────────────────────────────────────────────────
 # Prisma 7 은 Node 22 이상을 요구한다. 런타임이 바뀌면 네이티브 모듈을
@@ -58,17 +76,22 @@ if [[ $LOCK_NOW == "$LOCK_DONE" && $NODE_UPGRADED == 0 && -d node_modules ]]; th
 else
   log "의존성 설치"
   # 돌고 있는 앱이 node_modules 를 읽는 중이다. 그 자리에서 지우면 앱이 죽는다.
-  # 별도 디렉터리에 만든 뒤 마지막에 바꿔 끼운다.
-  asuser rm -rf .deps-new
-  asuser mkdir -p .deps-new
-  asuser cp package.json package-lock.json .deps-new/
-  ( cd .deps-new && slow npm ci --no-audit --no-fund )
+  # 별도 폴더에 만든 뒤 마지막에 바꿔 끼운다.
+  wipe "$APP_DIR/.deps-new"
+  mkdir -p "$APP_DIR/.deps-new"
+  cp package.json package-lock.json "$APP_DIR/.deps-new/"
+  chown -R "$APP_USER:$APP_USER" "$APP_DIR/.deps-new"
 
-  asuser rm -rf node_modules.previous
-  if [[ -d node_modules ]]; then asuser mv node_modules node_modules.previous; fi
-  asuser mv .deps-new/node_modules node_modules
-  asuser rm -rf .deps-new
-  asuser tee "$LOCK_MARK" >/dev/null <<< "$LOCK_NOW"
+  ( cd "$APP_DIR/.deps-new" && slow npm ci --no-audit --no-fund )
+  [[ -d $APP_DIR/.deps-new/node_modules ]] || die "설치가 끝났는데 node_modules 가 없습니다"
+
+  wipe "$APP_DIR/node_modules.previous"
+  if [[ -d node_modules ]]; then mv node_modules node_modules.previous; fi
+  mv "$APP_DIR/.deps-new/node_modules" node_modules
+  wipe "$APP_DIR/.deps-new"
+
+  printf '%s\n' "$LOCK_NOW" > "$LOCK_MARK"
+  chown -R "$APP_USER:$APP_USER" node_modules
   ok "설치 완료"
 fi
 
@@ -88,12 +111,14 @@ fi
 # npx 는 상황에 따라 내려받으려 들 수 있어 설치된 파일을 직접 부른다.
 log "DB 준비"
 PRISMA=$APP_DIR/node_modules/.bin/prisma
-[[ -x $PRISMA ]] || { echo "  prisma 가 설치되어 있지 않습니다: $PRISMA"; exit 1; }
+[[ -x $PRISMA ]] || die "prisma 가 설치되어 있지 않습니다: $PRISMA"
 
 asuser "$PRISMA" generate >/dev/null
 ok "접속 코드 생성"
 
 if [[ -d prisma/migrations ]]; then
+  # Postgres 15 부터는 public 스키마에 표를 만들 권한이 기본으로 없다.
+  sudo -u postgres psql -q -d "$APP" -c "GRANT ALL ON SCHEMA public TO \"$APP\";" >/dev/null 2>&1 || true
   asuser "$PRISMA" migrate deploy
   ok "스키마 반영"
 fi
@@ -107,9 +132,10 @@ ok "DB 준비 완료"
 # ── 빌드 ──────────────────────────────────────────────────────────
 # 실행 중인 .next 를 건드리지 않고 옆에 만든다.
 log "빌드"
-asuser rm -rf .next-building
-sudo -u "$APP_USER" env NEXT_DIST_DIR=.next-building nice -n 19 ionice -c3 npm run build
-ok "빌드 완료"
+wipe "$APP_DIR/.next-building"
+sudo -u "$APP_USER" -H env NEXT_DIST_DIR=.next-building nice -n 19 ionice -c3 npm run build
+[[ -f $APP_DIR/.next-building/BUILD_ID ]] || die "빌드 결과가 없습니다"
+ok "빌드 완료 ($(cat "$APP_DIR/.next-building/BUILD_ID"))"
 
 # ── 자동 배포 등록 ────────────────────────────────────────────────
 CRON=/etc/cron.d/$APP-autodeploy
@@ -128,16 +154,41 @@ chmod +x "$APP_DIR/deploy/"*.sh 2>/dev/null || true
 # ── 교체 + 재시작 ─────────────────────────────────────────────────
 # 여기까지 왔으면 전부 성공한 것이다. 이제서야 실행본을 바꾼다.
 log "교체"
-asuser rm -rf .next-previous
-[[ -d .next ]] && asuser mv .next .next-previous
-asuser mv .next-building .next
+wipe "$APP_DIR/.next-previous"
+if [[ -d .next ]]; then mv .next .next-previous; fi
+mv "$APP_DIR/.next-building" .next
+chown -R "$APP_USER:$APP_USER" .next
 ok "교체 완료"
 
 log "재시작"
 asuser pm2 reload "$APP" --update-env
 asuser pm2 save
 
-# 직전 의존성은 재시작이 끝난 뒤에 치운다
-asuser rm -rf node_modules.previous 2>/dev/null || true
+# ── 살아 있는지 확인 ──────────────────────────────────────────────
+# 바꿔 끼웠는데 안 뜨면 사이트가 통째로 죽는다. 확인하고 아니면 되돌린다.
+PORT=$(grep -E '^PORT=' "$APP_DIR/.env" 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '"' || true)
+PORT=${PORT:-3000}
 
-printf '\n\033[1;32m✓ 완료\033[0m  %s\n\n' "$(asuser git log -1 --pretty='%h %s')"
+HEALTHY=0
+for _ in $(seq 1 30); do
+  sleep 1
+  if curl -fsS -o /dev/null --max-time 3 "http://127.0.0.1:$PORT/"; then HEALTHY=1; break; fi
+done
+
+if [[ $HEALTHY == 0 ]]; then
+  printf '\n\033[1;31m✗ 새 버전이 응답하지 않습니다 — 되돌립니다\033[0m\n'
+  if [[ -d $APP_DIR/.next-previous ]]; then
+    wipe "$APP_DIR/.next-failed"
+    mv .next .next-failed
+    mv .next-previous .next
+    asuser pm2 reload "$APP" --update-env
+    echo "  이전 버전으로 돌아갔습니다. 실패한 빌드는 .next-failed 에 남겨뒀습니다."
+  fi
+  die "배포 실패"
+fi
+
+# 직전 것들은 잘 뜬 뒤에 치운다
+wipe "$APP_DIR/node_modules.previous"
+
+printf '\n\033[1;32m✓ 완료\033[0m  %s  (빌드 %s)\n\n' \
+  "$(asuser git log -1 --pretty='%h %s')" "$(cat "$APP_DIR/.next/BUILD_ID")"

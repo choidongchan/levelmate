@@ -13,9 +13,10 @@ APP_DIR=/opt/$APP
 APP_USER=$APP
 LOG=/var/log/$APP-deploy.log
 
-# 겹쳐 도는 것 방지. 이미 배포 중이면 조용히 빠진다.
-exec 9>"/var/lock/$APP-deploy.lock"
-flock -n 9 || exit 0
+# 겹쳐 도는 것은 두 군데서 막는다.
+#   - cron 이 hanpan-cron.lock 으로 자동 배포끼리 겹치는 것을 막고
+#   - update.sh 가 hanpan-deploy.lock 으로 손으로 돌린 것과 겹치는 것을 막는다
+# 여기서 deploy.lock 을 잡으면 update.sh 가 제 부모를 기다리다 멈춘다. 잡지 않는다.
 
 # 로그가 무한정 자라지 않게 (1MB 넘으면 최근 200줄만 남긴다)
 if [[ -f $LOG ]] && [[ $(stat -c%s "$LOG") -gt 1048576 ]]; then
