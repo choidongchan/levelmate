@@ -1,6 +1,18 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // levelmate.co.kr 로 들어와도 www 로 모아준다. (호스팅에서 처리한다면 지워도 무방)
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'levelmate.co.kr' }],
+        destination: 'https://www.levelmate.co.kr/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   async headers() {
     return [
       {

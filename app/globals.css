@@ -7,20 +7,17 @@
     -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard',
     'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', system-ui, sans-serif;
 
-  --color-ink: #07070b;
-  --color-surface: #13131c;
-  --color-surface-2: #1c1c28;
-  --color-surface-3: #262634;
-  --color-line: #2c2c3d;
-  --color-muted: #8c8ca6;
-  --color-dim: #5f5f78;
+  --color-ink: #06060a;
+  --color-muted: #9797b4;
+  --color-dim: #6a6a86;
 
   --color-brand: #8b5cf6;
   --color-brand-bright: #a855f7;
-  --color-brand-deep: #5b21b6;
+  --color-pink: #f472b6;
+  --color-cyan: #22d3ee;
 
   --color-online: #22c55e;
-  --color-star: #facc15;
+  --color-star: #fbbf24;
 }
 
 :root {
@@ -30,7 +27,7 @@
 html,
 body {
   background: var(--color-ink);
-  color: #f2f2f7;
+  color: #f5f5fa;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -45,12 +42,13 @@ body {
 @media (min-width: 768px) {
   body {
     background:
-      radial-gradient(60rem 40rem at 50% -10%, rgb(139 92 246 / 0.14), transparent 70%),
+      radial-gradient(50rem 32rem at 50% -6%, rgb(168 85 247 / 0.16), transparent 70%),
+      radial-gradient(40rem 30rem at 100% 100%, rgb(34 211 238 / 0.07), transparent 70%),
       var(--color-ink);
+    background-attachment: fixed;
   }
 }
 
-/* 가로 스크롤 영역의 스크롤바를 숨긴다 (모바일 느낌 유지) */
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -59,12 +57,30 @@ body {
   display: none;
 }
 
-@keyframes lm-pulse-ring {
+/* 유리 느낌의 카드 표면. 단색 회색 박스보다 훨씬 덜 밋밋하다. */
+@utility glass {
+  background: rgb(255 255 255 / 0.045);
+  border: 1px solid rgb(255 255 255 / 0.07);
+  backdrop-filter: blur(12px);
+}
+
+@utility brand-gradient {
+  background-image: linear-gradient(120deg, #a855f7 0%, #7c3aed 45%, #4f46e5 100%);
+}
+
+/* 숫자·가격처럼 눈에 박혀야 하는 텍스트 */
+@utility gradient-text {
+  background-image: linear-gradient(100deg, #c084fc, #f472b6);
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes lm-ring {
   0% {
-    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.55);
+    box-shadow: 0 0 0 0 rgb(34 197 94 / 0.6);
   }
   70% {
-    box-shadow: 0 0 0 6px rgb(34 197 94 / 0);
+    box-shadow: 0 0 0 5px rgb(34 197 94 / 0);
   }
   100% {
     box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
@@ -72,5 +88,27 @@ body {
 }
 
 .online-dot {
-  animation: lm-pulse-ring 2s ease-out infinite;
+  animation: lm-ring 2.4s ease-out infinite;
+}
+
+@keyframes lm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise {
+  animation: lm-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .online-dot {
+    animation: none;
+  }
 }

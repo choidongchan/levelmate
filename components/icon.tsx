@@ -43,6 +43,8 @@ const PATHS = {
   arrowRight: <path d="M13.2 5.3 11.8 6.7 16.1 11H4v2h12.1l-4.3 4.3 1.4 1.4L20 12l-6.8-6.7Z" />,
   download: <path d="M12 3v9.2l3.6-3.6 1.4 1.4-6 6-6-6 1.4-1.4L10 12.2V3h2ZM4 19h16v2H4v-2Z" />,
   bolt: <path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z" />,
+  grid: <path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h8v8h-8v-8Zm2 2v4h4v-4h-4Z" />,
+  list: <path d="M3 5h4v4H3V5Zm6 1h12v2H9V6ZM3 10h4v4H3v-4Zm6 1h12v2H9v-2ZM3 15h4v4H3v-4Zm6 1h12v2H9v-2Z" />,
 } as const
 
 export type IconName = keyof typeof PATHS

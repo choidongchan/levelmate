@@ -20,15 +20,16 @@ export type Product = {
   price: string
   unit: string
   icon: 'headset' | 'chart' | 'monitor' | 'group' | 'trophy'
+  accent: string
   featured?: boolean
 }
 
 export const PRODUCTS: Product[] = [
-  { id: 'duo', name: '온라인 듀오', desc: '함께 게임', price: '8,000원~', unit: '/시간', icon: 'headset' },
-  { id: 'coach', name: '게임 코칭', desc: '티어 상승', price: '15,000원~', unit: '/시간', icon: 'chart' },
-  { id: 'pcbang', name: 'PC방 동행', desc: '제휴 PC방', price: '20,000원~', unit: '/시간', icon: 'monitor', featured: true },
-  { id: 'party', name: '5인 파티', desc: '팀 단위 매칭', price: '50,000원~', unit: '/팀', icon: 'group' },
-  { id: 'tournament', name: '대회 파트너', desc: '대회 참가', price: '별도 협의', unit: '', icon: 'trophy' },
+  { id: 'duo', name: '온라인 듀오', desc: '함께 게임', price: '8,000원~', unit: '시간당', icon: 'headset', accent: '#22d3ee' },
+  { id: 'coach', name: '게임 코칭', desc: '티어 상승', price: '15,000원~', unit: '시간당', icon: 'chart', accent: '#34d399' },
+  { id: 'pcbang', name: 'PC방 동행', desc: '제휴 PC방', price: '20,000원~', unit: '시간당', icon: 'monitor', accent: '#a855f7', featured: true },
+  { id: 'party', name: '5인 파티', desc: '팀 단위 매칭', price: '50,000원~', unit: '팀당', icon: 'group', accent: '#f472b6' },
+  { id: 'tournament', name: '대회 파트너', desc: '대회 참가', price: '별도 협의', unit: '', icon: 'trophy', accent: '#fbbf24' },
 ]
 
 export type Mate = {

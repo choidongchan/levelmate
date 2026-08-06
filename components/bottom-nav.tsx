@@ -16,24 +16,33 @@ export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 backdrop-blur">
-      <div className="mx-auto flex max-w-md">
-        {TABS.map((tab) => {
-          const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              aria-current={active ? 'page' : undefined}
-              className={`flex flex-1 flex-col items-center gap-1 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] text-[10px] transition ${
-                active ? 'text-brand-bright' : 'text-dim hover:text-muted'
-              }`}
-            >
-              <Icon name={tab.icon} className="size-5" />
-              {tab.label}
-            </Link>
-          )
-        })}
+    <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-md px-4">
+        {/* 화면 폭을 꽉 채운 바 대신 떠 있는 알약 형태. 훨씬 가볍게 보인다. */}
+        <div className="pointer-events-auto flex items-center justify-between rounded-full border border-white/10 bg-[#0d0d15]/85 px-2 py-1.5 shadow-[0_8px_32px_rgb(0_0_0/0.55)] backdrop-blur-xl">
+          {TABS.map((tab) => {
+            const active = tab.href === '/' ? pathname === '/' : pathname.startsWith(tab.href)
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                aria-current={active ? 'page' : undefined}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-full py-2 text-[10px] font-medium transition ${
+                  active ? 'text-white' : 'text-dim hover:text-muted'
+                }`}
+              >
+                <span
+                  className={`grid place-items-center rounded-full transition ${
+                    active ? 'brand-gradient size-8 shadow-lg shadow-brand/40' : 'size-8'
+                  }`}
+                >
+                  <Icon name={tab.icon} className="size-[18px]" />
+                </span>
+                {tab.label}
+              </Link>
+            )
+          })}
+        </div>
       </div>
     </nav>
   )
