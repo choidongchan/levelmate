@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   // 원자적으로 교체한다. 평소에는 기본값 .next 를 쓴다.
   distDir: process.env.NEXT_DIST_DIR || '.next',
 
+  // 서버는 작다. 빌드하면서 타입 검사까지 돌리면 메모리가 모자라 죽는다.
+  // 타입은 올리기 전에 이미 본다 (npm run check).
+  typescript: { ignoreBuildErrors: true },
+
   // levelmate.co.kr 로 들어와도 www 로 모아준다. (호스팅에서 처리한다면 지워도 무방)
   async redirects() {
     return [

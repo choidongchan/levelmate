@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
 import { db } from '../db'
 import { ActionError } from './actions'
 
@@ -12,10 +10,10 @@ import { ActionError } from './actions'
  * 1년치 남아 있어서 본인 화면만 멀쩡해 보이고 다른 사람 화면에서만 안 보인다.
  * 알아채기 가장 어려운 종류의 고장이라 DB 로 옮겼다. 백업에도 같이 들어간다.
  *
- * 예전에 디스크에 담긴 사진이 남아 있으면, 읽을 때 DB 로 옮겨 담는다.
+ * 파일 시스템은 아예 건드리지 않는다. 경로를 조립해서 읽으면 번들러가
+ * '어떤 파일이든 읽을 수 있다'고 보고 프로젝트 전체를 끌어안아, 작은 서버에서는
+ * 빌드가 메모리 부족으로 죽는다.
  */
-const LEGACY_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), '.uploads')
-
 const MAX_BYTES = 3 * 1024 * 1024
 
 export const PHOTO_PREFIX = '/api/photos/'
@@ -37,12 +35,6 @@ const TYPES: Record<string, { ext: string; mime: string; looksRight: (b: Buffer)
     mime: 'image/png',
     looksRight: (b) => b[0] === 0x89 && b.subarray(1, 4).toString() === 'PNG',
   },
-}
-
-const MIME_BY_EXT: Record<string, string> = {
-  webp: 'image/webp',
-  jpg: 'image/jpeg',
-  png: 'image/png',
 }
 
 const NAME_RE = /^[a-f0-9]{32}\.(webp|jpg|png)$/
@@ -74,19 +66,9 @@ export async function savePhoto(dataUrl: unknown): Promise<string> {
 
 export async function readPhoto(name: string) {
   if (!NAME_RE.test(name)) return null
-
   const row = await db.photo.findUnique({ where: { id: name } })
-  if (row) return { body: Buffer.from(row.data), mime: row.mime }
-
-  // 예전에 디스크에 담긴 사진이면 이참에 DB 로 옮겨 담는다
-  const legacy = await readFile(path.join(LEGACY_DIR, name)).catch(() => null)
-  if (!legacy) return null
-
-  const mime = MIME_BY_EXT[name.split('.').pop() as string]
-  await db.photo
-    .create({ data: { id: name, mime, data: legacy, bytes: legacy.byteLength } })
-    .catch(() => {})
-  return { body: legacy, mime }
+  if (!row) return null
+  return { body: Buffer.from(row.data), mime: row.mime }
 }
 
 /**
@@ -109,18 +91,11 @@ export async function photoDiagnostics() {
 
     if (url.startsWith(PHOTO_PREFIX)) {
       uploaded += 1
-      const name = url.slice(PHOTO_PREFIX.length)
-      if (!stored.has(name)) {
-        const onDisk = await readFile(path.join(LEGACY_DIR, name))
-          .then(() => true)
-          .catch(() => false)
-        if (!onDisk) broken.push({ nickname: u.nickname, reason: '사진 파일이 사라졌습니다' })
+      if (!stored.has(url.slice(PHOTO_PREFIX.length))) {
+        broken.push({ nickname: u.nickname, reason: '사진이 서버에 없습니다. 다시 올려주세요' })
       }
     } else if (url.startsWith('data:')) {
-      broken.push({
-        nickname: u.nickname,
-        reason: '옛 방식으로 담긴 사진입니다. 다시 올려주세요',
-      })
+      broken.push({ nickname: u.nickname, reason: '옛 방식으로 담긴 사진입니다. 다시 올려주세요' })
     } else {
       staticPath += 1
       if (!url.startsWith('/')) {

@@ -140,17 +140,6 @@ else
   ok "설치 완료"
 fi
 
-# ── 예전 사진 폴더 ────────────────────────────────────────────────
-# 사진은 이제 DB 에 담는다. 예전에 파일로 담긴 것이 남아 있을 수 있어
-# 읽을 수 있게만 해둔다. 한 번 읽히면 DB 로 옮겨 담고 다시는 안 본다.
-UPLOAD_DIR=$APP_DIR/uploads
-mkdir -p "$UPLOAD_DIR"
-chown "$APP_USER:$APP_USER" "$UPLOAD_DIR"
-if ! grep -q '^UPLOAD_DIR=' "$APP_DIR/.env" 2>/dev/null; then
-  printf 'UPLOAD_DIR="%s"\n' "$UPLOAD_DIR" >> "$APP_DIR/.env"
-  ok ".env 에 UPLOAD_DIR 추가"
-fi
-
 # ── DB ────────────────────────────────────────────────────────────
 # 접속 코드를 스키마에 맞춰 다시 만든다. 빌드 전에 반드시 해야 한다.
 # npx 는 상황에 따라 내려받으려 들 수 있어 설치된 파일을 직접 부른다.
@@ -195,7 +184,21 @@ ok "DB 준비 완료"
 # 실행 중인 .next 를 건드리지 않고 옆에 만든다.
 log "빌드"
 wipe "$APP_DIR/.next-building"
-sudo -u "$APP_USER" -H env NEXT_DIST_DIR=.next-building nice -n 19 ionice -c3 npm run build
+
+# 이 서버는 메모리가 넉넉하지 않다. 한도를 정해두지 않으면 빌드가 끝까지
+# 먹다가 죽고(heap out of memory), 옆에서 도는 다른 서비스까지 위험해진다.
+RAM_MB=$(free -m | awk '/^Mem:/{print $2}')
+BUILD_MB=$(( RAM_MB / 2 ))
+(( BUILD_MB < 768 )) && BUILD_MB=768
+(( BUILD_MB > 3072 )) && BUILD_MB=3072
+echo "  메모리 ${RAM_MB}MB 중 빌드에 ${BUILD_MB}MB 까지"
+
+sudo -u "$APP_USER" -H env \
+  NEXT_DIST_DIR=.next-building \
+  NODE_OPTIONS="--max-old-space-size=$BUILD_MB" \
+  NEXT_TELEMETRY_DISABLED=1 \
+  nice -n 19 ionice -c3 npm run build
+
 [[ -f $APP_DIR/.next-building/BUILD_ID ]] || die "빌드 결과가 없습니다"
 ok "빌드 완료 ($(cat "$APP_DIR/.next-building/BUILD_ID"))"
 
