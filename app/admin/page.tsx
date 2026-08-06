@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { PromiseBadge } from '@/components/badges'
 import { Icon } from '@/components/icon'
+import { ListingEditForm, UserEditForm } from '@/components/admin-forms'
 import { LoginRequired } from '@/components/login-required'
 import { ScreenHeader } from '@/components/screen-header'
 import { UserArt } from '@/components/user-art'
@@ -17,11 +18,12 @@ import {
   useStore,
   verifyUser,
 } from '@/lib/store'
-import { FEE_RATE, type User } from '@/lib/types'
+import { FEE_RATE, GAMES, LISTING_KINDS, MEET_MODES, type User } from '@/lib/types'
 
 const TABS = [
   { key: 'overview', label: '현황' },
   { key: 'users', label: '회원 관리' },
+  { key: 'listings', label: '글 관리' },
   { key: 'settlements', label: '정산' },
 ] as const
 
@@ -82,6 +84,7 @@ export default function AdminPage() {
 
         {tab === 'overview' && <Overview />}
         {tab === 'users' && <Users meId={me.id} />}
+        {tab === 'listings' && <Listings />}
         {tab === 'settlements' && <Settlements />}
       </main>
     </>
@@ -174,6 +177,8 @@ function Users({ meId }: { meId: string }) {
 }
 
 function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
+  const [editing, setEditing] = useState(false)
+
   return (
     <div className="glass rounded-3xl p-4">
       <div className="flex items-center gap-3">
@@ -213,6 +218,14 @@ function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
         <div className="ml-auto flex items-center gap-1.5">
           <button
             type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
+          >
+            {editing ? '닫기' : '수정'}
+          </button>
+
+          <button
+            type="button"
             onClick={() => verifyUser(user.id, !user.verified)}
             className="rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
           >
@@ -247,6 +260,78 @@ function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
             </>
           )}
         </div>
+      </div>
+
+      {editing && <UserEditForm user={user} onDone={() => setEditing(false)} />}
+    </div>
+  )
+}
+
+function Listings() {
+  const state = useStore()
+  const [q, setQ] = useState('')
+  const [openId, setOpenId] = useState<string | null>(null)
+
+  const listings = state.listings
+    .filter((l) => l.title.includes(q.trim()) || l.tier.includes(q.trim()))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="glass flex items-center gap-2.5 rounded-full px-4 py-3">
+        <Icon name="search" className="size-4 shrink-0 text-dim" />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="제목 또는 티어로 검색"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
+        />
+      </div>
+
+      <p className="px-1 text-xs text-dim">{listings.length}개</p>
+
+      <div className="grid gap-2.5 md:grid-cols-2">
+        {listings.map((l) => {
+          const author = state.users.find((u) => u.id === l.userId)
+          const kind = LISTING_KINDS[l.kind]
+          return (
+            <div key={l.id} className="glass rounded-3xl p-4">
+              <div className="flex items-center gap-2">
+                <span
+                  className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{ color: kind.color, background: `${kind.color}1a` }}
+                >
+                  {kind.label}
+                </span>
+                <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-muted">
+                  {MEET_MODES[l.meetMode].short}
+                </span>
+                {!l.active && (
+                  <span className="shrink-0 rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-dim">
+                    숨김
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setOpenId(openId === l.id ? null : l.id)}
+                  className="ml-auto shrink-0 rounded-full bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
+                >
+                  {openId === l.id ? '닫기' : '수정'}
+                </button>
+              </div>
+
+              <p className="mt-2 truncate text-sm font-bold">{l.title}</p>
+              <p className="mt-1 truncate text-[11px] text-dim">
+                {author?.nickname ?? '삭제된 회원'} · {GAMES[l.mainGame].short} {l.tier} ·{' '}
+                {l.region} · {l.pricePerHour === 0 ? '무료' : `${l.pricePerHour.toLocaleString()}원/시간`}
+              </p>
+
+              {openId === l.id && (
+                <ListingEditForm listing={l} onDone={() => setOpenId(null)} />
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )

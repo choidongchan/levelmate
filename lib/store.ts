@@ -183,6 +183,12 @@ export function createListing(input: Omit<Listing, 'id' | 'createdAt' | 'active'
   return listing
 }
 
+export function updateListing(listingId: string, patch: Partial<Listing>) {
+  set({
+    listings: state.listings.map((l) => (l.id === listingId ? { ...l, ...patch } : l)),
+  })
+}
+
 export function toggleListing(listingId: string) {
   set({
     listings: state.listings.map((l) =>
