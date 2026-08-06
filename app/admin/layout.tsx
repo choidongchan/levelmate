@@ -101,6 +101,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Icon name="logout" className="size-4" />
             로그아웃
           </button>
+          {/* 컴퓨터마다 다른 것이 보일 때, 같은 버전을 보고 있는지 바로 확인한다 */}
+          <p className="px-3 pt-1 pb-1 text-[10px] break-all text-dim">
+            버전 {state.build || '확인 중'}
+          </p>
         </div>
       </aside>
 
