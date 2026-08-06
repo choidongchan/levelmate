@@ -201,11 +201,13 @@ function ProductStrip() {
   return (
     <section>
       <SectionTitle title="동행 상품" />
-      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
+      {/* 옆으로 밀어야 나머지가 보이면 있는 줄도 모른다. 모바일은 3열로 접어
+          다섯 개가 한눈에 들어오게 한다. PC 는 그대로 한 줄. */}
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-5 md:gap-3">
         {PRODUCTS.map((p) => (
           <div
             key={p.id}
-            className={`flex w-[7.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center md:w-auto ${
+            className={`flex flex-col items-center gap-1 rounded-2xl border p-3 text-center md:gap-2 md:p-4 ${
               p.featured
                 ? 'border-brand bg-brand/10 shadow-[0_0_24px_-6px] shadow-brand/60'
                 : 'border-line bg-surface'
@@ -213,11 +215,12 @@ function ProductStrip() {
           >
             <Icon
               name={p.icon as IconName}
-              className={`size-7 ${p.featured ? 'text-brand-bright' : 'text-muted'}`}
+              className={`size-6 md:size-7 ${p.featured ? 'text-brand-bright' : 'text-muted'}`}
             />
-            <p className="text-sm font-semibold">{p.name}</p>
-            <p className="text-[11px] text-dim">{p.desc}</p>
-            <p className="mt-1 text-[13px] leading-tight font-bold text-brand-bright">
+            <p className="text-[13px] leading-tight font-semibold md:text-sm">{p.name}</p>
+            {/* 좁은 화면에서는 설명까지 넣으면 글자만 빽빽해진다 */}
+            <p className="hidden text-[11px] text-dim md:block">{p.desc}</p>
+            <p className="mt-0.5 text-xs leading-tight font-bold text-brand-bright md:mt-1 md:text-[13px]">
               {p.price}
               {p.unit && <span className="block text-[10px] font-medium text-dim">{p.unit}</span>}
             </p>
