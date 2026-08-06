@@ -13,13 +13,13 @@ const logo = (size) => `
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 48 48">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#6d28d9"/>
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
   </defs>
   <rect width="48" height="48" rx="13" fill="url(#g)"/>
-  <path d="M12 34V17.5l8 8.5 8-8.5V34" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M31 27.5 36 22l5 5.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+  <path d="M11 13h26a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H23l-7 6v-6h-5a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3Z" fill="#fff"/>
+  <path d="M18 20h3v2h3v-2h3v2h2v3h-2v2h-2v2h-3v-2h-2v-2h-2v-3h2Z" fill="#a855f7"/>
 </svg>`
 
 // maskable 용: 안드로이드가 가장자리를 잘라내므로 여백(safe zone)을 넉넉히 둔다
@@ -27,14 +27,14 @@ const maskable = (size) => `
 <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 48 48">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#a855f7"/>
-      <stop offset="100%" stop-color="#6d28d9"/>
+      <stop offset="0%" stop-color="#ec4899"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
     </linearGradient>
   </defs>
   <rect width="48" height="48" fill="url(#g)"/>
   <g transform="translate(24 24) scale(0.62) translate(-24 -24)">
-    <path d="M12 34V17.5l8 8.5 8-8.5V34" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M31 27.5 36 22l5 5.5" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>
+    <path d="M11 13h26a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H23l-7 6v-6h-5a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3Z" fill="#fff"/>
+    <path d="M18 20h3v2h3v-2h3v2h2v3h-2v2h-2v2h-3v-2h-2v-2h-2v-3h2Z" fill="#a855f7"/>
   </g>
 </svg>`
 

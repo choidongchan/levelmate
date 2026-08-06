@@ -37,7 +37,7 @@ function LoginScreen() {
         <div className="flex flex-col items-center gap-3 py-4 text-center">
           <Logo className="size-14" />
           <div>
-            <p className="text-lg font-black tracking-tight">레벨메이트 시작하기</p>
+            <p className="text-lg font-black tracking-tight">한판 시작하기</p>
             <p className="mt-1 text-xs text-dim">
               휴대폰 본인 인증을 마친 사람만 글을 올리고 예약할 수 있어요
             </p>

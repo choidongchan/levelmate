@@ -25,7 +25,7 @@ export function SideNav() {
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-1 border-r border-white/6 px-4 py-6 md:flex">
       <Link href="/" className="mb-6 flex items-center gap-2 px-2">
         <Logo className="size-8" />
-        <span className="text-[19px] font-black tracking-tight">레벨메이트</span>
+        <span className="text-[19px] font-black tracking-tight">한판</span>
       </Link>
 
       <nav className="flex flex-col gap-1">

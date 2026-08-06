@@ -49,7 +49,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between md:hidden">
           <div className="flex items-center gap-2">
             <Logo className="size-8" />
-            <span className="text-[19px] font-black tracking-tight">레벨메이트</span>
+            <span className="text-[19px] font-black tracking-tight">한판</span>
           </div>
           <div className="flex items-center gap-1">
             <Link
@@ -176,7 +176,7 @@ export default function HomePage() {
 
         <footer className="pt-2 pb-4 text-center">
           <p className="text-[10px] leading-relaxed text-dim">
-            레벨메이트는 게임 메이트 매칭을 중개하는 플랫폼입니다.
+            한판은 게임 메이트 매칭을 중개하는 플랫폼입니다.
             <br />
             만나서 진행하는 동행은 제휴 PC방 내에서만 이뤄집니다.
           </p>
@@ -225,9 +225,9 @@ function Hero() {
             한판?
           </span>
           <p className="text-[30px] leading-none font-black tracking-tight">
-            <span className="text-white">LEVEL</span>
+            <span className="text-white">HAN</span>
             <span className="bg-gradient-to-r from-[#f0abfc] to-[#f472b6] bg-clip-text text-transparent">
-              MATE
+              PAN
             </span>
           </p>
           <p className="mt-1.5 text-[9px] font-bold tracking-[0.15em] text-white/70">

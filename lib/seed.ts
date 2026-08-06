@@ -14,7 +14,7 @@ export const SEED_USERS: User[] = [
     verified: true,
     role: 'ADMIN',
     region: '서울 강남구',
-    intro: '레벨메이트 운영팀입니다.',
+    intro: '한판 운영팀입니다.',
     photoUrl: null,
     photoStatus: 'NONE',
     createdAt: '2026-07-01T09:00:00.000Z',

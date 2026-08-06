@@ -2,10 +2,10 @@ import type { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: '레벨메이트 — PC방 게임 동행 매칭',
-    short_name: '레벨메이트',
+    name: '한판 — 같이 게임할 사람 찾기',
+    short_name: '한판',
     description:
-      '게임 친구가 필요할 때, 레벨메이트. 제휴 PC방에서 안전하게 만나는 게임 동행 매칭 플랫폼.',
+      '혼자보다 함께, 게임은 더 재밌다. 게임 알려주고 배우고 같이하는 사람들.',
     start_url: '/',
     scope: '/',
     display: 'standalone',
