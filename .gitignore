@@ -38,3 +38,7 @@ yarn-error.log*
 # 빌드 임시/직전 산출물
 .next-building/
 .next-previous/
+
+# 배포 중 임시 산출물
+node_modules.previous/
+.deps-new/
