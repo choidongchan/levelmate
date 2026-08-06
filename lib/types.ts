@@ -173,3 +173,46 @@ export const REGIONS = [
 
 /** 플랫폼 수수료율 */
 export const FEE_RATE = 0.15
+
+// ─────────── 시안 구성 요소 ───────────
+
+export type Product = {
+  id: string
+  name: string
+  desc: string
+  price: string
+  unit: string
+  icon: 'headset' | 'chart' | 'monitor' | 'group' | 'trophy'
+  featured?: boolean
+}
+
+export const PRODUCTS: Product[] = [
+  { id: 'duo', name: '온라인 듀오', desc: '함께 게임', price: '8,000원~', unit: '/시간', icon: 'headset' },
+  { id: 'coach', name: '게임 코칭', desc: '티어 상승', price: '15,000원~', unit: '/시간', icon: 'chart' },
+  { id: 'pcbang', name: 'PC방 동행', desc: '제휴 PC방', price: '20,000원~', unit: '/시간', icon: 'monitor', featured: true },
+  { id: 'party', name: '5인 파티', desc: '팀 단위 매칭', price: '50,000원~', unit: '/팀', icon: 'group' },
+  { id: 'tournament', name: '대회 파트너', desc: '대회 참가', price: '별도 협의', unit: '', icon: 'trophy' },
+]
+
+export const HOW_TO_STEPS = [
+  { icon: 'search', title: '메이트 검색', desc: '게임, 티어, 지역\n시간 선택' },
+  { icon: 'calendar', title: '예약 및 결제', desc: '원하는 시간\n선결제' },
+  { icon: 'qr', title: 'PC방 체크인', desc: '제휴 매장 QR\n체크인' },
+  { icon: 'gamepad', title: '함께 게임', desc: '즐거운 시간\n함께 플레이' },
+  { icon: 'star', title: '평가 및 후기', desc: '상호 평가 후\n정산 완료' },
+] as const
+
+export const SAFETY_ITEMS = [
+  { icon: 'id', title: '본인 인증', desc: '휴대폰 본인 인증 필수' },
+  { icon: 'monitor', title: '제휴 PC방', desc: '지정 PC방에서만 동행 가능' },
+  { icon: 'check', title: '안심 결제', desc: '앱 내 안전 결제 시스템' },
+  { icon: 'alert', title: '신고 & 차단', desc: '문제 발생 시 즉시 신고' },
+  { icon: 'shield', title: '개인정보 보호', desc: '개인 연락처 노출 금지' },
+] as const
+
+export const PARTNER_BENEFITS = [
+  '프리미엄 좌석 예약',
+  '맛있는 F&B 주문',
+  '다양한 이벤트 참여',
+  '대회 참가 신청',
+]

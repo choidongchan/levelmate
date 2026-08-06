@@ -8,6 +8,10 @@
     'Malgun Gothic', '맑은 고딕', 'Noto Sans KR', system-ui, sans-serif;
 
   --color-ink: #06060a;
+  --color-surface: #13131c;
+  --color-surface-2: #1c1c28;
+  --color-surface-3: #262634;
+  --color-line: #2a2a3a;
   --color-muted: #9797b4;
   --color-dim: #6a6a86;
 

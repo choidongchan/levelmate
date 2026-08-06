@@ -1,55 +1,55 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Icon, type IconName } from '@/components/icon'
 import { InstallHint } from '@/components/install-hint'
-import { ListingCard } from '@/components/listing-card'
 import { Logo } from '@/components/logo'
-import { MascotPair } from '@/components/mascots'
+import { MateRow } from '@/components/mate-row'
 import { UserArt } from '@/components/user-art'
 import { currentUser, useStore } from '@/lib/store'
 import {
+  HOW_TO_STEPS,
   LISTING_KINDS,
+  PARTNER_BENEFITS,
+  PRODUCTS,
   REGIONS,
+  SAFETY_ITEMS,
   type ListingKind,
-  type MeetMode,
 } from '@/lib/types'
-
-type KindFilter = ListingKind | 'ALL'
-type ModeFilter = MeetMode | 'ALL'
 
 export default function HomePage() {
   const state = useStore()
   const me = currentUser(state)
 
-  const [kind, setKind] = useState<KindFilter>('ALL')
-  const [mode, setMode] = useState<ModeFilter>('ALL')
-  const [region, setRegion] = useState<string>('전체 지역')
+  const [region, setRegion] = useState('전체 지역')
   const [regionOpen, setRegionOpen] = useState(false)
+  const [kind, setKind] = useState<ListingKind | 'ALL'>('ALL')
 
-  const listings = useMemo(() => {
+  /** 시안의 '추천 메이트' — 활성 글을 가진 사람들을 대표 글 기준으로 보여준다 */
+  const mates = useMemo(() => {
+    const seen = new Set<string>()
     return state.listings
       .filter((l) => l.active)
       .filter((l) => (kind === 'ALL' ? true : l.kind === kind))
-      .filter((l) => {
-        if (mode === 'ALL') return true
-        if (mode === 'ONLINE') return l.meetMode === 'ONLINE' || l.meetMode === 'BOTH'
-        return l.meetMode === 'OFFLINE' || l.meetMode === 'BOTH'
-      })
       .filter((l) => (region === '전체 지역' ? true : l.region === region))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [state.listings, kind, mode, region])
-
-  const authorOf = (userId: string) => state.users.find((u) => u.id === userId)
+      .flatMap((l) => {
+        if (seen.has(l.userId)) return []
+        seen.add(l.userId)
+        const user = state.users.find((u) => u.id === l.userId)
+        return user ? [{ user, listing: l }] : []
+      })
+  }, [state.listings, state.users, kind, region])
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-ink/70 px-5 pt-4 pb-3 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 border-b border-line bg-ink/90 px-4 py-3 backdrop-blur md:border-b-0">
         <div className="flex items-center justify-between md:hidden">
           <div className="flex items-center gap-2">
-            <Logo className="size-8" />
-            <span className="text-[19px] font-black tracking-tight">한판</span>
+            <Logo className="size-7" />
+            <span className="text-lg font-bold tracking-tight">한판</span>
           </div>
           <div className="flex items-center gap-1">
             <Link
@@ -57,7 +57,7 @@ export default function HomePage() {
               aria-label="검색"
               className="grid size-9 place-items-center rounded-full text-muted transition hover:bg-white/8 hover:text-white"
             >
-              <Icon name="search" className="size-[19px]" />
+              <Icon name="search" className="size-5" />
             </Link>
             {me ? (
               <Link href="/my" aria-label="마이">
@@ -74,8 +74,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 지역 선택 — 만나서 하는 동행은 지역이 핵심이라 항상 위에 둔다 */}
-        <div className="relative mt-2.5 md:mt-0">
+        <div className="relative mt-2 md:mt-0">
           <button
             type="button"
             onClick={() => setRegionOpen((v) => !v)}
@@ -88,7 +87,6 @@ export default function HomePage() {
               className={`size-4 transition ${regionOpen ? 'rotate-180' : ''}`}
             />
           </button>
-
           {regionOpen && (
             <>
               <button
@@ -97,7 +95,7 @@ export default function HomePage() {
                 onClick={() => setRegionOpen(false)}
                 className="fixed inset-0 z-10 cursor-default"
               />
-              <ul className="absolute top-8 left-0 z-20 max-h-72 w-60 overflow-y-auto rounded-2xl border border-white/10 bg-[#14141d] py-1 shadow-2xl">
+              <ul className="absolute top-8 left-0 z-20 max-h-72 w-60 overflow-y-auto rounded-2xl border border-line bg-surface-2 py-1 shadow-2xl">
                 {['전체 지역', ...REGIONS].map((r) => (
                   <li key={r}>
                     <button
@@ -106,7 +104,7 @@ export default function HomePage() {
                         setRegion(r)
                         setRegionOpen(false)
                       }}
-                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-white/6 ${
+                      className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm transition hover:bg-surface-3 ${
                         r === region ? 'text-brand-bright' : 'text-muted'
                       }`}
                     >
@@ -121,175 +119,191 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex flex-col gap-6 px-5 pt-3">
-        <Hero />
-
-        <section>
-          <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
-            <Tab active={kind === 'ALL'} onClick={() => setKind('ALL')}>
-              전체
-            </Tab>
-            {(Object.keys(LISTING_KINDS) as ListingKind[]).map((k) => (
-              <Tab
-                key={k}
-                active={kind === k}
-                onClick={() => setKind(k)}
-                color={LISTING_KINDS[k].color}
-              >
-                {LISTING_KINDS[k].label}
-              </Tab>
-            ))}
-          </div>
-
-          <div className="mt-2.5 flex gap-2">
-            <Chip active={mode === 'ALL'} onClick={() => setMode('ALL')}>
-              전체
-            </Chip>
-            <Chip active={mode === 'ONLINE'} onClick={() => setMode('ONLINE')}>
-              <Icon name="headset" className="size-3" /> 온라인
-            </Chip>
-            <Chip active={mode === 'OFFLINE'} onClick={() => setMode('OFFLINE')}>
-              <Icon name="monitor" className="size-3" /> 만나서
-            </Chip>
-          </div>
-        </section>
-
-        <section className="flex flex-col gap-2.5">
-          <p className="text-xs text-dim">
-            <span className="font-bold text-white">{listings.length}</span>개의 글
-          </p>
-
-          {listings.length === 0 ? (
-            <Empty />
-          ) : (
-            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-            {listings.map((l, i) => {
-              const author = authorOf(l.userId)
-              if (!author) return null
-              return <ListingCard key={l.id} listing={l} author={author} index={i} />
-            })}
-            </div>
-          )}
-        </section>
-
+      <main className="flex flex-col gap-8 px-4 pt-4">
+        <HeroBanner />
+        <ProductStrip />
+        <Recommended
+          mates={mates}
+          kind={kind}
+          onKind={setKind}
+        />
+        <HowTo />
+        <Safety />
+        <PartnerCard />
         <InstallHint />
-
-        <footer className="pt-2 pb-4 text-center">
-          <p className="text-[10px] leading-relaxed text-dim">
-            한판은 게임 메이트 매칭을 중개하는 플랫폼입니다.
-            <br />
-            만나서 진행하는 동행은 제휴 PC방 내에서만 이뤄집니다.
-          </p>
-        </footer>
       </main>
-
-      {/* 글쓰기 */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-28 z-30 md:hidden">
-        <div className="mx-auto flex max-w-md justify-end px-5">
-          <Link
-            href="/listings/new"
-            className="cta pointer-events-auto flex items-center gap-1.5 rounded-full px-4 py-3 text-sm font-black transition active:scale-95"
-          >
-            <Icon name="plus" className="size-4" />
-            글쓰기
-          </Link>
-        </div>
-      </div>
     </>
   )
 }
 
-function Hero() {
+function HeroBanner() {
   return (
-    <section className="rise relative overflow-hidden rounded-[2rem] px-5 pt-6 pb-5 text-center"
-      style={{ background: 'linear-gradient(160deg, #c4b5fd 0%, #a78bfa 45%, #8b5cf6 100%)' }}
+    <Link
+      href="/search"
+      className="rise relative block overflow-hidden rounded-3xl transition active:scale-[0.99]"
+      aria-label="게임 메이트 찾기"
     >
-      {/* 도트 패턴 */}
-      <span
-        aria-hidden
-        className="dots pointer-events-none absolute inset-0 opacity-25"
+      <Image
+        src="/hero.webp"
+        alt="한판 — 혼자보다 함께, 게임은 더 재밌다"
+        width={1100}
+        height={1100}
+        priority
+        sizes="(max-width: 768px) 100vw, 640px"
+        className="h-auto w-full"
       />
+    </Link>
+  )
+}
 
-      <div className="relative">
-        <span className="inline-block rounded-full bg-[#1b1030] px-3.5 py-1.5 text-[10px] font-bold tracking-wide text-white">
-          PC방 게임 매칭
-        </span>
-
-        <p className="mt-3 text-[13px] font-bold text-[#2a1650]">
-          혼자보다 함께, 게임은 <span className="text-[#db2777]">더 재밌다!</span>
-        </p>
-
-        {/* 말풍선 로고 */}
-        <div className="sticker relative mx-auto mt-3 inline-block rounded-[1.6rem] bg-[#1b1030] px-7 py-4">
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full border-2 border-white bg-[#f9a8d4] px-2.5 py-0.5 text-[10px] font-black text-[#831843]">
-            한판?
-          </span>
-          <p className="text-[30px] leading-none font-black tracking-tight">
-            <span className="text-white">HAN</span>
-            <span className="bg-gradient-to-r from-[#f0abfc] to-[#f472b6] bg-clip-text text-transparent">
-              PAN
-            </span>
-          </p>
-          <p className="mt-1.5 text-[9px] font-bold tracking-[0.15em] text-white/70">
-            FIND YOUR GAMING BUDDY!
-          </p>
-          <span
-            aria-hidden
-            className="absolute -bottom-2 left-14 size-5 rotate-45 border-r-4 border-b-4 border-white bg-[#1b1030]"
-          />
-        </div>
-
-        <MascotPair className="mx-auto mt-4 w-full max-w-[19rem]" />
-
-        {/* 기능 스트립 */}
-        <ul className="mt-3 grid grid-cols-4 gap-1 rounded-3xl bg-white/95 px-2 py-3">
-          {[
-            { icon: 'clock', label: '빠른 매칭' },
-            { icon: 'group', label: '함께 플레이' },
-            { icon: 'chat', label: '실시간 채팅' },
-            { icon: 'trophy', label: '같이 승리' },
-          ].map((f) => (
-            <li key={f.label} className="flex flex-col items-center gap-1.5">
-              <Icon name={f.icon as IconName} className="size-5 text-[#7c3aed]" />
-              <span className="text-[10px] font-bold text-[#3b2a5c]">{f.label}</span>
-            </li>
-          ))}
-        </ul>
-
-        <Link
-          href="/listings/new"
-          className="cta mt-3 flex items-center justify-center gap-1.5 rounded-full py-3 text-sm font-black text-white transition active:scale-[0.99]"
-        >
-          지금 바로 <span className="text-[#fde047]">한판</span> 하러 가자!
-          <Icon name="chevronRight" className="size-4" />
-        </Link>
+function ProductStrip() {
+  return (
+    <section>
+      <SectionTitle title="동행 상품" />
+      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        {PRODUCTS.map((p) => (
+          <div
+            key={p.id}
+            className={`flex w-[7.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center ${
+              p.featured
+                ? 'border-brand bg-brand/10 shadow-[0_0_24px_-6px] shadow-brand/60'
+                : 'border-line bg-surface'
+            }`}
+          >
+            <Icon
+              name={p.icon as IconName}
+              className={`size-7 ${p.featured ? 'text-brand-bright' : 'text-muted'}`}
+            />
+            <p className="text-sm font-semibold">{p.name}</p>
+            <p className="text-[11px] text-dim">{p.desc}</p>
+            <p className="mt-1 text-[13px] leading-tight font-bold text-brand-bright">
+              {p.price}
+              {p.unit && <span className="block text-[10px] font-medium text-dim">{p.unit}</span>}
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   )
 }
 
-function Tab({
-  active,
-  onClick,
-  color,
-  children,
+function Recommended({
+  mates,
+  kind,
+  onKind,
 }: {
-  active: boolean
-  onClick: () => void
-  color?: string
-  children: React.ReactNode
+  mates: { user: import('@/lib/types').User; listing: import('@/lib/types').Listing }[]
+  kind: ListingKind | 'ALL'
+  onKind: (k: ListingKind | 'ALL') => void
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`shrink-0 rounded-full px-4 py-2 text-[13px] font-bold transition ${
-        active ? 'text-ink' : 'bg-white/5 text-muted hover:text-white'
-      }`}
-      style={active ? { background: color ?? '#ffffff' } : undefined}
+    <section>
+      <SectionTitle
+        title="추천 메이트"
+        action={
+          <Link href="/search" className="flex items-center gap-0.5 text-xs text-dim hover:text-muted">
+            더보기
+            <Icon name="chevronRight" className="size-3.5" />
+          </Link>
+        }
+      />
+
+      {/* 글 유형 필터 */}
+      <div className="no-scrollbar -mx-4 mb-3 flex gap-2 overflow-x-auto px-4">
+        <Chip active={kind === 'ALL'} onClick={() => onKind('ALL')}>
+          전체
+        </Chip>
+        {(Object.keys(LISTING_KINDS) as ListingKind[]).map((k) => (
+          <Chip key={k} active={kind === k} onClick={() => onKind(k)}>
+            {LISTING_KINDS[k].label}
+          </Chip>
+        ))}
+      </div>
+
+      {mates.length === 0 ? (
+        <p className="py-10 text-center text-sm text-dim">조건에 맞는 메이트가 없어요</p>
+      ) : (
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {mates.map(({ user, listing }, i) => (
+            <MateRow key={user.id} user={user} listing={listing} index={i} />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function HowTo() {
+  return (
+    <section>
+      <SectionTitle title="이용 방법" />
+      <ol className="grid grid-cols-5 gap-1">
+        {HOW_TO_STEPS.map((step, i) => (
+          <li key={step.title} className="flex flex-col items-center gap-2 text-center">
+            <span className="relative grid size-11 place-items-center rounded-full border border-line bg-surface">
+              <Icon name={step.icon as IconName} className="size-5 text-brand-bright" />
+              <span className="absolute -top-1 -right-1 grid size-4 place-items-center rounded-full bg-brand text-[9px] font-bold">
+                {i + 1}
+              </span>
+            </span>
+            <span className="text-[11px] font-semibold">{step.title}</span>
+            <span className="text-[10px] leading-tight whitespace-pre-line text-dim">
+              {step.desc}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+function Safety() {
+  return (
+    <section className="rounded-3xl border border-line bg-surface p-5">
+      <h2 className="text-base font-bold">안심하고 이용하세요!</h2>
+      <ul className="mt-4 grid grid-cols-3 gap-x-2 gap-y-5">
+        {SAFETY_ITEMS.map((item) => (
+          <li key={item.title} className="flex flex-col items-center gap-1.5 text-center">
+            <Icon name={item.icon as IconName} className="size-6 text-brand-bright" />
+            <span className="text-xs font-semibold">{item.title}</span>
+            <span className="text-[10px] leading-tight text-dim">{item.desc}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function PartnerCard() {
+  return (
+    <section
+      className="relative overflow-hidden rounded-3xl border border-brand/40 p-5"
+      style={{ background: 'linear-gradient(150deg, #1a1030 0%, #120b22 60%, #0d0818 100%)' }}
     >
-      {children}
-    </button>
+      <h2 className="text-base font-bold text-brand-bright">레벨업 PC방과 함께</h2>
+      <p className="mt-1 text-xs text-muted">전국 레벨업 PC방에서 더 특별한 경험을!</p>
+      <ul className="mt-4 grid gap-2">
+        {PARTNER_BENEFITS.map((b) => (
+          <li key={b} className="flex items-center gap-2 text-sm">
+            <Icon name="check" className="size-4 shrink-0 text-brand-bright" />
+            {b}
+          </li>
+        ))}
+      </ul>
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -bottom-10 size-36 rounded-full bg-brand/20 blur-3xl"
+      />
+    </section>
+  )
+}
+
+function SectionTitle({ title, action }: { title: string; action?: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <h2 className="text-base font-bold">{title}</h2>
+      {action}
+    </div>
   )
 }
 
@@ -306,25 +320,13 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] transition ${
+      className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs transition ${
         active
-          ? 'border-white/25 bg-white/12 font-bold text-white'
-          : 'border-white/8 bg-white/4 text-dim hover:text-muted'
+          ? 'border-brand bg-brand/15 font-semibold text-brand-bright'
+          : 'border-line bg-surface text-muted hover:text-white'
       }`}
     >
       {children}
     </button>
-  )
-}
-
-function Empty() {
-  return (
-    <div className="flex flex-col items-center gap-2 py-16 text-center">
-      <span className="glass grid size-14 place-items-center rounded-2xl">
-        <Icon name="search" className="size-6 text-dim" />
-      </span>
-      <p className="mt-1 text-sm font-semibold">조건에 맞는 글이 없어요</p>
-      <p className="text-xs text-dim">필터를 바꾸거나 첫 글을 올려보세요</p>
-    </div>
   )
 }
