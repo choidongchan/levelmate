@@ -264,7 +264,9 @@ function Recommended({
       {mates.length === 0 ? (
         <p className="py-10 text-center text-sm text-dim">조건에 맞는 메이트가 없어요</p>
       ) : (
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        // 사진이 너무 커 보이지 않게 화면이 넓어질수록 한 줄에 더 넣는다.
+        // 모바일은 가로형 한 줄짜리라 그대로 세로로 쌓는다.
+        <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {mates.map(({ user, listing }, i) => (
             <MateRow key={user.id} user={user} listing={listing} index={i} />
           ))}

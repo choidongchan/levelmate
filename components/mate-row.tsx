@@ -34,33 +34,34 @@ export function MateRow({
       <UserArt
         user={user}
         className="aspect-[3/4] w-[4.75rem] shrink-0 rounded-xl md:w-full md:rounded-none"
-        sizes="(max-width: 768px) 80px, 320px"
-        priority={index < 4}
+        sizes="(max-width: 768px) 80px, 260px"
+        priority={index < 5}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-none md:px-3.5 md:pt-3">
-        <div className="flex items-center gap-2">
-          <span className="truncate font-semibold">{user.nickname}</span>
-          <span className="flex shrink-0 items-center gap-1 text-[11px]">
+      {/* PC 는 한 줄에 여러 장이 들어가므로 글자를 조금 줄여 사진과 균형을 맞춘다 */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-none md:px-3 md:pt-2.5">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate font-semibold md:text-sm">{user.nickname}</span>
+          <span className="flex shrink-0 items-center gap-1 text-[11px] md:text-[10px]">
             <span className="online-dot size-1.5 rounded-full bg-online" />
             <span className="text-online">온라인</span>
           </span>
         </div>
-        <p className="mt-0.5 truncate text-xs text-muted">
+        <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
           {GAMES[listing.mainGame].short} · {listing.tier}
         </p>
-        <p className="mt-1 truncate text-xs text-dim">{listing.title}</p>
+        <p className="mt-1 truncate text-xs text-dim md:text-[11px]">{listing.title}</p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:px-3.5 md:pt-2 md:pb-3.5">
-        <span className="inline-flex items-center gap-1 text-xs">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:gap-1 md:px-3 md:pt-1.5 md:pb-3">
+        <span className="inline-flex items-center gap-1 text-xs md:text-[11px]">
           <Icon name="star" className="size-3.5 text-star" />
           <span className="font-semibold tabular-nums">{rating?.toFixed(1) ?? '신규'}</span>
           {user.reviewCount > 0 && (
             <span className="text-dim tabular-nums">({user.reviewCount})</span>
           )}
         </span>
-        <span className="text-sm font-bold text-brand-bright">
+        <span className="text-sm font-bold text-brand-bright md:text-[13px]">
           {listing.pricePerHour === 0 ? (
             <span className="text-online">무료</span>
           ) : (

@@ -133,7 +133,7 @@ export default function SearchPage() {
             <p className="text-xs text-dim">필터를 바꿔보세요</p>
           </div>
         ) : (
-          <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {results.map((l, i) => {
               const author = state.users.find((u) => u.id === l.userId)
               if (!author) return null
