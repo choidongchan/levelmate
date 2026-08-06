@@ -34,6 +34,22 @@ fi
 log "빌드"
 sudo -u "$APP_USER" nice -n 19 ionice -c3 npm run build
 
+# ── 자동 배포 등록 ────────────────────────────────────────────────
+# 1분마다 GitHub 을 확인해 새 커밋이 있을 때만 배포한다.
+# 이미 등록돼 있으면 그대로 둔다.
+CRON=/etc/cron.d/$APP-autodeploy
+if [[ ! -f $CRON ]]; then
+  cat > "$CRON" <<CRONEOF
+# 한판 자동 배포 — 새 커밋이 있을 때만 동작한다
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+* * * * * root /usr/bin/flock -n /var/lock/$APP-cron.lock $APP_DIR/deploy/autodeploy.sh
+CRONEOF
+  chmod 644 "$CRON"
+  echo "  자동 배포 등록됨 (1분마다 확인, 로그: /var/log/$APP-deploy.log)"
+fi
+chmod +x "$APP_DIR/deploy/"*.sh 2>/dev/null || true
+
 log "재시작"
 sudo -u "$APP_USER" pm2 reload "$APP" --update-env
 sudo -u "$APP_USER" pm2 save

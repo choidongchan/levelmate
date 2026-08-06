@@ -59,15 +59,33 @@ sudo certbot --nginx -d www.levelmate.co.kr -d levelmate.co.kr
 
 인증서는 자동 갱신된다.
 
-## 이후 업데이트
+## 이후 업데이트 — 자동으로 나간다
 
-코드가 바뀔 때마다:
+`main` 에 푸시하면 **1분 안에 서버가 알아서 받아서 배포한다.** 손댈 일이 없다.
+
+동작 방식 (`deploy/autodeploy.sh`)
+
+- 1분마다 원격 해시를 한 번 조회한다. 같으면 아무것도 하지 않는다
+- 새 커밋이 있을 때만 받아서 빌드하고 재시작한다
+- 배포가 도는 중에 다시 불려도 잠금 때문에 겹치지 않는다
+- **빌드가 실패하면 돌던 프로세스를 그대로 둔다.** 서비스가 끊기지 않고,
+  다음 커밋에서 다시 시도한다
+
+```bash
+tail -f /var/log/hanpan-deploy.log   # 배포 기록
+```
+
+### 직접 배포하고 싶을 때
 
 ```bash
 sudo bash /opt/hanpan/deploy/update.sh
 ```
 
-빌드가 실패하면 기존 프로세스를 그대로 두고 멈춘다. 서비스가 끊기지 않는다.
+### 자동 배포를 끄려면
+
+```bash
+sudo rm /etc/cron.d/hanpan-autodeploy
+```
 
 ## 자주 쓰는 명령
 
