@@ -80,14 +80,23 @@ asuser git reset --hard -q origin/main
 ok "$(asuser git log -1 --pretty='%h %s')"
 
 # ── 의존성 ────────────────────────────────────────────────────────
-# '지금 깔려 있는 것이 어느 잠금 파일로 깔렸는지'를 적어두고 그걸 본다.
-# 배포 도중 실패하면 코드는 이미 새것이라, 이번 실행 안에서만 앞뒤를 비교하면
-# 다음 시도 때 '그대로네' 하고 설치를 건너뛴다. 그러면 새 패키지가 영영 안 깔린다.
+# 표시 파일 하나만 보고 '깔려 있네' 하고 넘어가면 안 된다. 실제로 텅 빈
+# node_modules 를 두고 건너뛴 적이 있다. 쓸 수 있는 상태인지 직접 확인한다.
+NEEDED=(next prisma @prisma/client @prisma/adapter-pg react)
 LOCK_NOW=$(sha1sum package-lock.json | cut -c1-40)
-LOCK_MARK=$APP_DIR/node_modules/.installed-from
-LOCK_DONE=$(cat "$LOCK_MARK" 2>/dev/null || echo none)
+LOCK_MARK=$APP_DIR/.deps-installed-from   # node_modules 밖에 둔다. 같이 날아가지 않게.
 
-if [[ $LOCK_NOW == "$LOCK_DONE" && $NODE_UPGRADED == 0 && -d node_modules ]]; then
+deps_usable() {
+  [[ -d $APP_DIR/node_modules ]] || return 1
+  local pkg
+  for pkg in "${NEEDED[@]}"; do
+    [[ -d $APP_DIR/node_modules/$pkg ]] || return 1
+  done
+  return 0
+}
+
+if [[ $NODE_UPGRADED == 0 && $(cat "$LOCK_MARK" 2>/dev/null || echo none) == "$LOCK_NOW" ]] \
+   && deps_usable; then
   ok "의존성 그대로 — 설치 건너뜀"
 else
   log "의존성 설치"
@@ -99,23 +108,36 @@ else
   chown -R "$APP_USER:$APP_USER" "$APP_DIR/.deps-new"
 
   ( cd "$APP_DIR/.deps-new" && slow npm ci --no-audit --no-fund )
-  [[ -d $APP_DIR/.deps-new/node_modules ]] || die "설치가 끝났는데 node_modules 가 없습니다"
 
+  # 옮기기 전에 새로 깔린 것부터 확인한다. 여기서 이상하면 실행본은 손도 대지 않는다.
+  NEW=$APP_DIR/.deps-new/node_modules
+  [[ -d $NEW ]] || die "설치가 끝났는데 $NEW 가 없습니다"
+  for pkg in "${NEEDED[@]}"; do
+    [[ -d $NEW/$pkg ]] && continue
+    echo "  새로 깔린 것 안에 $pkg 가 없습니다. 들어 있는 것 (앞부분):"
+    ls -A "$NEW" 2>/dev/null | head -25 | sed 's/^/    /'
+    die "설치가 제대로 되지 않았습니다"
+  done
+  ok "새 의존성 확인 ($(ls -A "$NEW" | wc -l)개)"
+
+  # 목적지가 남아 있으면 mv 가 '그 안으로' 넣어버려 node_modules/node_modules 가 된다.
   wipe "$APP_DIR/node_modules.previous"
-  if [[ -d node_modules ]]; then mv node_modules node_modules.previous; fi
-  mv "$APP_DIR/.deps-new/node_modules" node_modules
+  if [[ -d $APP_DIR/node_modules ]]; then mv "$APP_DIR/node_modules" "$APP_DIR/node_modules.previous"; fi
+  wipe "$APP_DIR/node_modules"
+  mv "$NEW" "$APP_DIR/node_modules"
   wipe "$APP_DIR/.deps-new"
 
-  printf '%s\n' "$LOCK_NOW" > "$LOCK_MARK"
-  chown -R "$APP_USER:$APP_USER" node_modules
-  ok "설치 완료"
+  chown -R "$APP_USER:$APP_USER" "$APP_DIR/node_modules"
+  deps_usable || die "옮기고 나니 node_modules 가 온전하지 않습니다"
 
-  # 실행 파일 링크(.bin)가 빠진 채로 넘어가면 빌드가 엉뚱한 데서 죽는다.
-  # 빠졌으면 그 자리에서 다시 만든다.
-  if [[ ! -e node_modules/.bin/next ]]; then
+  # 실행 파일 링크(.bin)가 빠지면 빌드가 엉뚱한 데서 죽는다. 빠졌으면 다시 만든다.
+  if [[ ! -e $APP_DIR/node_modules/.bin/next ]]; then
     echo "  실행 파일 링크가 없어 다시 만듭니다"
     asuser npm rebuild --no-audit --no-fund >/dev/null 2>&1 || true
   fi
+
+  printf '%s\n' "$LOCK_NOW" > "$LOCK_MARK"
+  ok "설치 완료"
 fi
 
 # ── 예전 사진 폴더 ────────────────────────────────────────────────
