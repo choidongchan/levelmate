@@ -19,8 +19,10 @@ APP_USER=$APP
 
 log() { printf '\n\033[1;35m▶ %s\033[0m\n' "$*"; }
 ok()  { printf '  \033[1;32m✓\033[0m %s\n' "$*"; }
-asuser() { sudo -u "$APP_USER" "$@"; }
-slow()   { sudo -u "$APP_USER" nice -n 19 ionice -c3 "$@"; }
+# -H 를 붙여 HOME 을 그 계정의 것으로 맞춘다. 안 그러면 npm·prisma 가
+# root 의 홈에 캐시를 쓰려다 권한이 없어 실패한다.
+asuser() { sudo -u "$APP_USER" -H "$@"; }
+slow()   { sudo -u "$APP_USER" -H nice -n 19 ionice -c3 "$@"; }
 
 [[ $EUID -eq 0 ]] || { echo "sudo 로 실행해주세요"; exit 1; }
 cd "$APP_DIR"
@@ -39,15 +41,19 @@ fi
 
 # ── 코드 ──────────────────────────────────────────────────────────
 log "코드 받기"
-LOCK_BEFORE=$(sha1sum package-lock.json 2>/dev/null | cut -c1-40 || echo none)
 asuser git fetch --depth 50 origin main   # 되돌리기용으로 최근 기록을 남긴다
 asuser git reset --hard -q origin/main
 ok "$(asuser git log -1 --pretty='%h %s')"
-LOCK_AFTER=$(sha1sum package-lock.json | cut -c1-40)
 
 # ── 의존성 ────────────────────────────────────────────────────────
-# 잠금 파일이 그대로면 건너뛴다. 대부분의 배포는 여기서 시간을 아낀다.
-if [[ $LOCK_BEFORE == "$LOCK_AFTER" && $NODE_UPGRADED == 0 && -d node_modules ]]; then
+# '지금 깔려 있는 것이 어느 잠금 파일로 깔렸는지'를 적어두고 그걸 본다.
+# 배포 도중 실패하면 코드는 이미 새것이라, 이번 실행 안에서만 앞뒤를 비교하면
+# 다음 시도 때 '그대로네' 하고 설치를 건너뛴다. 그러면 새 패키지가 영영 안 깔린다.
+LOCK_NOW=$(sha1sum package-lock.json | cut -c1-40)
+LOCK_MARK=$APP_DIR/node_modules/.installed-from
+LOCK_DONE=$(cat "$LOCK_MARK" 2>/dev/null || echo none)
+
+if [[ $LOCK_NOW == "$LOCK_DONE" && $NODE_UPGRADED == 0 && -d node_modules ]]; then
   ok "의존성 그대로 — 설치 건너뜀"
 else
   log "의존성 설치"
@@ -59,9 +65,10 @@ else
   ( cd .deps-new && slow npm ci --no-audit --no-fund )
 
   asuser rm -rf node_modules.previous
-  [[ -d node_modules ]] && asuser mv node_modules node_modules.previous
+  if [[ -d node_modules ]]; then asuser mv node_modules node_modules.previous; fi
   asuser mv .deps-new/node_modules node_modules
   asuser rm -rf .deps-new
+  asuser tee "$LOCK_MARK" >/dev/null <<< "$LOCK_NOW"
   ok "설치 완료"
 fi
 
@@ -78,11 +85,19 @@ fi
 
 # ── DB ────────────────────────────────────────────────────────────
 # 접속 코드를 스키마에 맞춰 다시 만든다. 빌드 전에 반드시 해야 한다.
+# npx 는 상황에 따라 내려받으려 들 수 있어 설치된 파일을 직접 부른다.
 log "DB 준비"
-asuser npx prisma generate >/dev/null
+PRISMA=$APP_DIR/node_modules/.bin/prisma
+[[ -x $PRISMA ]] || { echo "  prisma 가 설치되어 있지 않습니다: $PRISMA"; exit 1; }
+
+asuser "$PRISMA" generate >/dev/null
+ok "접속 코드 생성"
+
 if [[ -d prisma/migrations ]]; then
-  asuser npx prisma migrate deploy
+  asuser "$PRISMA" migrate deploy
+  ok "스키마 반영"
 fi
+
 # 비어 있을 때만 채운다. 이미 회원이 있으면 아무것도 하지 않는다.
 if [[ -f prisma/seed.mjs ]]; then
   asuser node prisma/seed.mjs

@@ -33,7 +33,22 @@ REMOTE=$(sudo -u "$APP_USER" git ls-remote origin refs/heads/main 2>/dev/null | 
 
 # 네트워크가 잠깐 안 되면 그냥 넘어간다. 다음 분에 다시 본다.
 [[ -n ${REMOTE:-} ]] || exit 0
-[[ $LOCAL != "$REMOTE" ]] || exit 0
+
+# 코드를 먼저 받고 빌드하는 구조라, 빌드가 실패하면 이미 HEAD 는 새 커밋이다.
+# 그대로 두면 다음 분에 '최신이네' 하고 넘어가서 영영 다시 시도하지 않는다.
+# 사이트는 안 죽지만 옛 버전에 멈춘 채로 아무도 모르게 방치된다.
+# 그래서 실패한 커밋을 적어두고 10분마다 다시 시도한다.
+FAILED=$APP_DIR/.deploy-failed
+RETRY_AFTER=600
+
+if [[ $LOCAL == "$REMOTE" ]]; then
+  # 실패 기록이 없으면 정상적으로 최신인 것이다
+  [[ -f $FAILED ]] || exit 0
+  read -r FAILED_SHA FAILED_AT < "$FAILED" 2>/dev/null || exit 0
+  [[ $FAILED_SHA == "$REMOTE" ]] || { rm -f "$FAILED"; exit 0; }
+  (( $(date +%s) - FAILED_AT >= RETRY_AFTER )) || exit 0
+  echo "[$(date '+%F %T')] 실패했던 ${REMOTE:0:7} 다시 시도" >> "$LOG"
+fi
 
 {
   echo "──────────────────────────────────────────"
@@ -50,8 +65,14 @@ if ! sudo -u "$APP_USER" git fetch -q --depth 50 origin main >> "$LOG" 2>&1 \
 fi
 
 if bash "$APP_DIR/deploy/update.sh" >> "$LOG" 2>&1; then
-  echo "[$(date '+%F %T')] ✓ 배포 완료" >> "$LOG"
+  echo "[$(date '+%F %T')] ✓ 배포 완료 ${REMOTE:0:7}" >> "$LOG"
+  rm -f "$FAILED"
 else
-  # 실패해도 기존 프로세스는 그대로 돈다. 다음 커밋에서 다시 시도한다.
-  echo "[$(date '+%F %T')] ✗ 배포 실패 — 이전 버전으로 계속 서비스 중" >> "$LOG"
+  # 실패해도 기존 프로세스는 그대로 돈다. 10분 뒤에 다시 시도한다.
+  echo "$REMOTE $(date +%s)" > "$FAILED"
+  {
+    echo "[$(date '+%F %T')] ✗ 배포 실패 — 이전 버전으로 계속 서비스 중"
+    echo "    10분 뒤 다시 시도합니다. 바로 보려면:"
+    echo "    sudo bash $APP_DIR/deploy/update.sh"
+  } >> "$LOG"
 fi
