@@ -6,7 +6,11 @@ import { won } from '@/lib/format'
 import { ratingAvg } from '@/lib/promise-score'
 import { GAMES, type Listing, type User } from '@/lib/types'
 
-/** 시안의 '추천 메이트' 행. 사진 · 닉네임 · 게임/티어 · 한 줄 소개 · 평점 · 가격 · 게임 배지 */
+/**
+ * 추천 메이트 카드.
+ * 모바일은 가로형(왼쪽 세로 사진 + 오른쪽 정보), PC는 세로 카드로 전환해
+ * 사진이 카드 폭을 가득 채우게 한다. 같은 컴포넌트로 두 형태를 만든다.
+ */
 export function MateRow({
   user,
   listing,
@@ -21,17 +25,17 @@ export function MateRow({
   return (
     <Link
       href={`/users/${user.id}`}
-      className="rise flex items-stretch gap-3 rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99]"
+      className="rise flex items-stretch gap-3 overflow-hidden rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99] md:flex-col md:gap-0 md:p-0"
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
       <UserArt
         user={user}
-        className="aspect-[3/4] w-[4.75rem] shrink-0 rounded-xl"
-        sizes="80px"
+        className="aspect-[3/4] w-[4.75rem] shrink-0 rounded-xl md:w-full md:rounded-none"
+        sizes="(max-width: 768px) 80px, 320px"
         priority={index < 4}
       />
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center">
+      <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-none md:px-3.5 md:pt-3">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold">{user.nickname}</span>
           <span className="flex shrink-0 items-center gap-1 text-[11px]">
@@ -45,7 +49,7 @@ export function MateRow({
         <p className="mt-1 truncate text-xs text-dim">{listing.title}</p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:px-3.5 md:pt-2 md:pb-3.5">
         <span className="inline-flex items-center gap-1 text-xs">
           <Icon name="star" className="size-3.5 text-star" />
           <span className="font-semibold tabular-nums">{rating?.toFixed(1) ?? '신규'}</span>
@@ -63,7 +67,7 @@ export function MateRow({
             </>
           )}
         </span>
-        <div className="flex gap-1">
+        <div className="flex gap-1 md:hidden">
           {listing.games.slice(0, 3).map((g) => (
             <GameBadge key={g} game={g} />
           ))}

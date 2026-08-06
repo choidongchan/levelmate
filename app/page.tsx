@@ -119,7 +119,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      <main className="flex flex-col gap-8 px-4 pt-4">
+      <main className="flex flex-col gap-8 px-4 pt-4 md:gap-12 md:px-8 md:pt-6">
         <HeroBanner />
         <ProductStrip />
         <Recommended
@@ -138,21 +138,52 @@ export default function HomePage() {
 
 function HeroBanner() {
   return (
-    <Link
-      href="/search"
-      className="rise relative block overflow-hidden rounded-3xl transition active:scale-[0.99]"
-      aria-label="게임 메이트 찾기"
-    >
-      <Image
-        src="/hero.webp"
-        alt="한판 — 혼자보다 함께, 게임은 더 재밌다"
-        width={1100}
-        height={1100}
-        priority
-        sizes="(max-width: 768px) 100vw, 640px"
-        className="h-auto w-full"
-      />
-    </Link>
+    <section className="rise grid gap-6 md:grid-cols-[minmax(0,21rem)_1fr] md:items-center md:gap-10">
+      <Link
+        href="/search"
+        className="block overflow-hidden rounded-3xl transition active:scale-[0.99]"
+        aria-label="게임 메이트 찾기"
+      >
+        <Image
+          src="/hero.webp"
+          alt="한판 — 혼자보다 함께, 게임은 더 재밌다"
+          width={1100}
+          height={1100}
+          priority
+          sizes="(max-width: 768px) 100vw, 340px"
+          className="h-auto w-full"
+        />
+      </Link>
+
+      {/* 넓은 화면에서만 보이는 소개 영역 — 모바일은 키비주얼만으로 충분하다 */}
+      <div className="hidden md:block">
+        <p className="text-sm font-bold text-brand-bright">PC방 기반 게임 메이트 매칭</p>
+        <h1 className="mt-2.5 text-4xl leading-[1.2] font-black tracking-tight">
+          혼자보다 함께,
+          <br />
+          게임은 더 재밌다
+        </h1>
+        <p className="mt-4 text-sm leading-relaxed text-muted">
+          게임을 알려주고, 배우고, 같이할 사람을 찾아보세요.
+          <br />
+          온라인으로도 제휴 PC방에서 만나서도 가능합니다.
+        </p>
+        <div className="mt-7 flex gap-3">
+          <Link
+            href="/search"
+            className="rounded-2xl bg-brand px-6 py-3.5 text-sm font-bold transition hover:bg-brand-bright"
+          >
+            메이트 찾기
+          </Link>
+          <Link
+            href="/listings/new"
+            className="rounded-2xl border border-line bg-surface px-6 py-3.5 text-sm font-bold transition hover:bg-surface-2"
+          >
+            내 글 올리기
+          </Link>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -160,11 +191,11 @@ function ProductStrip() {
   return (
     <section>
       <SectionTitle title="동행 상품" />
-      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1 md:mx-0 md:grid md:grid-cols-5 md:overflow-visible md:px-0">
         {PRODUCTS.map((p) => (
           <div
             key={p.id}
-            className={`flex w-[7.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center ${
+            className={`flex w-[7.5rem] shrink-0 flex-col items-center gap-2 rounded-2xl border p-4 text-center md:w-auto ${
               p.featured
                 ? 'border-brand bg-brand/10 shadow-[0_0_24px_-6px] shadow-brand/60'
                 : 'border-line bg-surface'
