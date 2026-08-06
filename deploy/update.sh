@@ -109,6 +109,13 @@ else
   printf '%s\n' "$LOCK_NOW" > "$LOCK_MARK"
   chown -R "$APP_USER:$APP_USER" node_modules
   ok "설치 완료"
+
+  # 실행 파일 링크(.bin)가 빠진 채로 넘어가면 빌드가 엉뚱한 데서 죽는다.
+  # 빠졌으면 그 자리에서 다시 만든다.
+  if [[ ! -e node_modules/.bin/next ]]; then
+    echo "  실행 파일 링크가 없어 다시 만듭니다"
+    asuser npm rebuild --no-audit --no-fund >/dev/null 2>&1 || true
+  fi
 fi
 
 # ── 예전 사진 폴더 ────────────────────────────────────────────────
@@ -125,17 +132,34 @@ fi
 # ── DB ────────────────────────────────────────────────────────────
 # 접속 코드를 스키마에 맞춰 다시 만든다. 빌드 전에 반드시 해야 한다.
 # npx 는 상황에 따라 내려받으려 들 수 있어 설치된 파일을 직접 부른다.
+# .bin/prisma 는 심볼릭 링크라 없거나 깨져 있을 수 있다.
+# 링크를 거치지 않고 실제 파일을 직접 부른다.
 log "DB 준비"
-PRISMA=$APP_DIR/node_modules/.bin/prisma
-[[ -x $PRISMA ]] || die "prisma 가 설치되어 있지 않습니다: $PRISMA"
+PRISMA_DIR=$APP_DIR/node_modules/prisma
+if [[ ! -d $PRISMA_DIR ]]; then
+  echo "  node_modules/prisma 가 없습니다. 설치가 제대로 되지 않았습니다."
+  echo "  지금 node_modules 안에 있는 것 (앞부분):"
+  ls "$APP_DIR/node_modules" 2>/dev/null | head -20 | sed 's/^/    /'
+  die "prisma 없음"
+fi
 
-asuser "$PRISMA" generate >/dev/null
+PRISMA_JS=$PRISMA_DIR/build/index.js
+if [[ ! -f $PRISMA_JS ]]; then
+  PRISMA_JS=$(node -e "
+    const p = require('$PRISMA_DIR/package.json')
+    const b = typeof p.bin === 'string' ? p.bin : p.bin.prisma
+    process.stdout.write(require('path').resolve('$PRISMA_DIR', b))
+  " 2>/dev/null || true)
+fi
+[[ -f ${PRISMA_JS:-} ]] || die "prisma 실행 파일을 찾지 못했습니다 ($PRISMA_DIR)"
+
+asuser node "$PRISMA_JS" generate >/dev/null
 ok "접속 코드 생성"
 
 if [[ -d prisma/migrations ]]; then
   # Postgres 15 부터는 public 스키마에 표를 만들 권한이 기본으로 없다.
   sudo -u postgres psql -q -d "$APP" -c "GRANT ALL ON SCHEMA public TO \"$APP\";" >/dev/null 2>&1 || true
-  asuser "$PRISMA" migrate deploy
+  asuser node "$PRISMA_JS" migrate deploy
   ok "스키마 반영"
 fi
 
