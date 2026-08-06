@@ -87,6 +87,23 @@ sudo bash /opt/hanpan/deploy/update.sh
 sudo rm /etc/cron.d/hanpan-autodeploy
 ```
 
+## 되돌리기
+
+문제가 생기면 예전 버전으로 즉시 돌아간다.
+
+```bash
+sudo bash /opt/hanpan/deploy/rollback.sh          # 최근 기록 보기
+sudo bash /opt/hanpan/deploy/rollback.sh back     # 바로 이전 버전으로
+sudo bash /opt/hanpan/deploy/rollback.sh a1b2c3d  # 특정 버전으로
+sudo bash /opt/hanpan/deploy/rollback.sh latest   # 고정 풀고 최신으로
+```
+
+**되돌리면 그 버전에 고정된다.** 고정된 동안에는 자동 배포가 멈춘다.
+이게 없으면 되돌린 지 1분 만에 최신 버전이 다시 덮어쓴다.
+
+고정 상태는 `/opt/hanpan/.deploy-pin` 파일로 표시된다.
+`rollback.sh latest` 를 돌리면 파일이 지워지고 자동 배포가 다시 켜진다.
+
 ## 자주 쓰는 명령
 
 ```bash

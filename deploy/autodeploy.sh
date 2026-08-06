@@ -24,6 +24,10 @@ fi
 
 cd "$APP_DIR"
 
+# 되돌려서 특정 버전에 고정한 상태면 자동 배포를 하지 않는다.
+# 이게 없으면 롤백한 지 1분 만에 최신 버전이 다시 덮어쓴다.
+[[ -f $APP_DIR/.deploy-pin ]] && exit 0
+
 LOCAL=$(sudo -u "$APP_USER" git rev-parse HEAD)
 REMOTE=$(sudo -u "$APP_USER" git ls-remote origin refs/heads/main 2>/dev/null | cut -f1)
 

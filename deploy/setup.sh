@@ -88,7 +88,7 @@ if [[ -d $APP_DIR/.git ]]; then
 else
   mkdir -p "$APP_DIR"
   chown "$APP_USER:$APP_USER" "$APP_DIR"
-  sudo -u "$APP_USER" git clone --depth 1 "$REPO" "$APP_DIR"
+  sudo -u "$APP_USER" git clone --depth 50 "$REPO" "$APP_DIR"
 fi
 ok "$APP_DIR"
 
@@ -197,6 +197,7 @@ cat <<EOF
 
   실행 확인:  curl -I http://127.0.0.1:$APP_PORT
   배포 로그:  tail -f /var/log/$APP-deploy.log
+  되돌리기:   sudo bash $APP_DIR/deploy/rollback.sh
   상태 보기:  sudo -u $APP_USER pm2 status
   로그 보기:  sudo -u $APP_USER pm2 logs $APP
 

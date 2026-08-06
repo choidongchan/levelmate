@@ -31,3 +31,6 @@ yarn-error.log*
 # editors
 .vscode/
 .idea/
+
+# 배포 고정 표시 (서버에서만 생김)
+.deploy-pin
