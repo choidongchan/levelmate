@@ -65,27 +65,45 @@ PC방 PC에서는 브라우저의 "앱으로 설치"로 바탕화면 아이콘�
 
 ## 데이터
 
-지금은 **브라우저 저장소(localStorage)** 에 담깁니다. 화면을 바로 굴려보기
-위한 임시 구성이라, 기기가 바뀌면 데이터가 따라오지 않습니다.
+데이터는 전부 **서버(PostgreSQL)** 에 있습니다. 어느 기기로 접속해도 같은 것이
+보이고, 여러 사람이 같이 씁니다.
 
-DB로 옮기는 경로는 열어뒀습니다.
+흐름은 한 방향입니다.
 
-- `prisma/schema.prisma` — 유저·메이트·사진·PC방·예약·결제·리뷰·메시지·신고·차단
-- `lib/store.ts` — 액션 본문만 서버 호출로 바꾸면 화면 코드는 그대로 갑니다
-- `lib/seed.ts` — 예시 데이터. 시드 스크립트로 옮기면 됩니다
+1. `app/layout.tsx` 가 요청마다 화면 한 벌(`lib/server/snapshot.ts`)을 만들어 내려보낸다
+2. `lib/store.ts` 가 그것을 받아 담는다 — 화면은 이 저장소만 본다
+3. 무언가 바꾸면 `/api/action` 으로 보내고, 서버가 바꾼 뒤 새 한 벌을 돌려준다
+
+보는 사람에 따라 담기는 게 다릅니다. 남의 예약과 대화는 아예 내려가지 않고,
+휴대폰 번호는 본인·관리자에게만 원문으로 갑니다.
+
+| 파일 | 하는 일 |
+| --- | --- |
+| `prisma/schema.prisma` | 표 정의. `lib/types.ts` 와 1:1로 맞춰져 있다 |
+| `lib/server/snapshot.ts` | 보는 사람 기준으로 화면 한 벌을 만든다 |
+| `lib/server/actions.ts` | 모든 변경과 권한 검사가 여기 모여 있다 |
+| `lib/server/auth.ts` | 세션 쿠키, 비밀번호 해시(scrypt) |
+| `lib/store.ts` | 화면이 쓰는 저장소. 서버 호출을 감싼다 |
+| `prisma/seed.mjs` | 첫 실행 때만 채우는 예시 데이터 + 관리자 계정 |
+
+프로필 사진은 DB 가 아니라 서버 디스크(`UPLOAD_DIR`)에 둡니다. `docs/photos.md` 참고.
 
 ## 기술 스택
 
 - Next.js 16 (App Router, Turbopack) / React 19
 - TypeScript, Tailwind CSS v4
+- PostgreSQL + Prisma 7 (`@prisma/adapter-pg`)
 - PWA: `app/manifest.ts` + `public/sw.js`
-- Prisma (스키마만 정의된 상태)
 
 ## 실행
 
+PostgreSQL 이 필요합니다. `.env.example` 을 `.env` 로 복사해 `DATABASE_URL` 을 채운 뒤:
+
 ```bash
 npm install
-npm run dev      # http://localhost:3000
+npx prisma migrate deploy   # 표 만들기
+node prisma/seed.mjs        # 예시 데이터 + 관리자 계정(levelup/levelup)
+npm run dev                 # http://localhost:3000
 ```
 
 ```bash

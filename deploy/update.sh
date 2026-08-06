@@ -65,11 +65,28 @@ else
   ok "설치 완료"
 fi
 
-# ── DB 스키마 ─────────────────────────────────────────────────────
+# ── 사진 보관 폴더 ────────────────────────────────────────────────
+# 저장소 바깥에 둔다. 코드를 갈아끼워도 올라온 사진은 그대로 남아야 한다.
+UPLOAD_DIR=$APP_DIR/uploads
+mkdir -p "$UPLOAD_DIR"
+chown "$APP_USER:$APP_USER" "$UPLOAD_DIR"
+if ! grep -q '^UPLOAD_DIR=' "$APP_DIR/.env" 2>/dev/null; then
+  printf 'UPLOAD_DIR="%s"\n' "$UPLOAD_DIR" >> "$APP_DIR/.env"
+  ok ".env 에 UPLOAD_DIR 추가"
+fi
+
+# ── DB ────────────────────────────────────────────────────────────
+# 접속 코드를 스키마에 맞춰 다시 만든다. 빌드 전에 반드시 해야 한다.
+log "DB 준비"
+asuser npx prisma generate >/dev/null
 if [[ -d prisma/migrations ]]; then
-  log "DB 스키마 반영"
   asuser npx prisma migrate deploy
 fi
+# 비어 있을 때만 채운다. 이미 회원이 있으면 아무것도 하지 않는다.
+if [[ -f prisma/seed.mjs ]]; then
+  asuser node prisma/seed.mjs
+fi
+ok "DB 준비 완료"
 
 # ── 빌드 ──────────────────────────────────────────────────────────
 # 실행 중인 .next 를 건드리지 않고 옆에 만든다.

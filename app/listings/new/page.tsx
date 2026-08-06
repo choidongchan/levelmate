@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Icon } from '@/components/icon'
 import { ScreenHeader } from '@/components/screen-header'
-import { PC_BANGS } from '@/lib/seed'
+import { PC_BANGS } from '@/lib/pcbangs'
 import { createListing, currentUser, useStore } from '@/lib/store'
 import {
   GAMES,
@@ -249,8 +249,8 @@ export default function NewListingPage() {
         <button
           type="button"
           disabled={!canSubmit}
-          onClick={() => {
-            const listing = createListing({
+          onClick={async () => {
+            const listing = await createListing({
               userId: me.id,
               kind,
               meetMode,
@@ -265,6 +265,7 @@ export default function NewListingPage() {
               availableFrom: from,
               availableTo: to,
             })
+            if (listing.error) return
             router.replace(`/listings/${listing.id}`)
           }}
           className="cta mt-2 rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"

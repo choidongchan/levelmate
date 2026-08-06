@@ -17,9 +17,8 @@ const MAX_ZOOM = 6
  * 3:4 칸을 꽉 채우게 맞춘 뒤 그 부분만 잘라 담는다.
  * 칸보다 작아지지 않게 막아두어 여백이나 찌그러짐이 생기지 않는다.
  *
- * 지금은 결과를 data URL 로 돌려주어 브라우저 저장소에 담는다.
- * 서버 업로드를 붙이면 이 컴포넌트는 그대로 두고 onPick 안에서
- * 올린 뒤 받은 주소를 넘기면 된다.
+ * 잘라낸 결과는 data URL 로 넘긴다. 받는 쪽에서 서버에 올리고
+ * 주소를 받아 담는다 (lib/store.ts 의 uploadPhoto).
  */
 export function PhotoPicker({
   value,

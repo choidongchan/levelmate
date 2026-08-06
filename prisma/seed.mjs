@@ -1,11 +1,28 @@
-import type { AdminAccount, Booking, Listing, Message, Plan, Settlement, User } from './types'
+// 첫 실행 때 DB 를 채운다.
+//
+//   node prisma/seed.mjs
+//
+// 이미 들어 있는 것은 건드리지 않는다. 배포 때마다 돌아도 안전하다.
+// 관리자 비밀번호는 ADMIN_PASSWORD 로 바꿔 넣을 수 있다.
 
-/**
- * 첫 실행 시 채워지는 예시 데이터.
- * 실제 DB(Prisma) 연결 시 이 파일은 시드 스크립트로 옮기면 된다.
- */
+import { randomBytes, scryptSync } from 'node:crypto'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from '@prisma/client'
+import 'dotenv/config'
 
-export const SEED_USERS: User[] = [
+const db = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+})
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex')
+  const key = scryptSync(password, salt, 64).toString('hex')
+  return `scrypt:${salt}:${key}`
+}
+
+const digits = (phone) => phone.replace(/[^0-9]/g, '')
+
+const USERS = [
   {
     id: 'u-admin',
     nickname: '운영자',
@@ -15,16 +32,7 @@ export const SEED_USERS: User[] = [
     role: 'ADMIN',
     region: '서울 강남구',
     intro: '한판 운영팀입니다.',
-    photoUrl: null,
-    photoStatus: 'NONE',
     createdAt: '2026-07-01T09:00:00.000Z',
-    bannedAt: null,
-    kept: 0,
-    late: 0,
-    cancelLate: 0,
-    noShow: 0,
-    ratingSum: 0,
-    reviewCount: 0,
   },
   {
     id: 'u-midking',
@@ -32,17 +40,13 @@ export const SEED_USERS: User[] = [
     hue: 282,
     phone: '010-1234-5678',
     verified: true,
-    role: 'MEMBER',
     region: '서울 강남구',
     intro: '10년째 롤만 합니다. 라인전 위주로 알려드려요.',
     photoUrl: '/mates/midking.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-07-03T09:00:00.000Z',
-    bannedAt: null,
     kept: 42,
     late: 1,
-    cancelLate: 0,
-    noShow: 0,
     ratingSum: 210,
     reviewCount: 43,
   },
@@ -52,17 +56,14 @@ export const SEED_USERS: User[] = [
     hue: 200,
     phone: '010-2222-3333',
     verified: true,
-    role: 'MEMBER',
     region: '서울 마포구',
     intro: '이번에 발로란트 시작했어요. 기초부터 배우고 싶습니다!',
     photoUrl: '/mates/newbie.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-07-20T09:00:00.000Z',
-    bannedAt: null,
     kept: 3,
     late: 1,
     cancelLate: 1,
-    noShow: 0,
     ratingSum: 24,
     reviewCount: 5,
   },
@@ -72,13 +73,11 @@ export const SEED_USERS: User[] = [
     hue: 320,
     phone: '010-4444-5555',
     verified: true,
-    role: 'MEMBER',
     region: '경기 성남시 분당구',
     intro: '새벽에 같이 게임할 사람 구해요. 즐겜 지향입니다.',
     photoUrl: '/mates/nightowl.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-06-11T09:00:00.000Z',
-    bannedAt: null,
     kept: 18,
     late: 3,
     cancelLate: 2,
@@ -92,17 +91,13 @@ export const SEED_USERS: User[] = [
     hue: 155,
     phone: '010-6666-7777',
     verified: true,
-    role: 'MEMBER',
     region: '부산 부산진구',
     intro: 'FC온라인 전술 코칭. 감독모드 세팅 알려드립니다.',
     photoUrl: '/mates/coach.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-05-02T09:00:00.000Z',
-    bannedAt: null,
     kept: 67,
-    late: 0,
     cancelLate: 1,
-    noShow: 0,
     ratingSum: 336,
     reviewCount: 68,
   },
@@ -112,19 +107,11 @@ export const SEED_USERS: User[] = [
     hue: 30,
     phone: '010-8888-9999',
     verified: false,
-    role: 'MEMBER',
     region: '서울 관악구',
     intro: '배그 스쿼드 한 자리 비어요. 마이크 필수!',
     photoUrl: '/mates/potato.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-08-01T09:00:00.000Z',
-    bannedAt: null,
-    kept: 0,
-    late: 0,
-    cancelLate: 0,
-    noShow: 0,
-    ratingSum: 0,
-    reviewCount: 0,
   },
   {
     id: 'u-overtime',
@@ -132,17 +119,12 @@ export const SEED_USERS: User[] = [
     hue: 95,
     phone: '010-1010-2020',
     verified: true,
-    role: 'MEMBER',
     region: '서울 광진구',
     intro: '퇴근하고 오버워치 같이 하실 분. 실력 상관없어요.',
     photoUrl: '/mates/overtime.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-07-15T09:00:00.000Z',
-    bannedAt: null,
     kept: 11,
-    late: 0,
-    cancelLate: 0,
-    noShow: 0,
     ratingSum: 55,
     reviewCount: 11,
   },
@@ -152,23 +134,18 @@ export const SEED_USERS: User[] = [
     hue: 15,
     phone: '010-3030-4040',
     verified: true,
-    role: 'MEMBER',
     region: '경기 수원시 영통구',
     intro: '메이플 복귀 유저입니다. 요즘 뭐가 바뀌었는지 알려주실 분?',
     photoUrl: '/mates/mapler.jpg',
     photoStatus: 'APPROVED',
     createdAt: '2026-07-28T09:00:00.000Z',
-    bannedAt: null,
     kept: 6,
-    late: 0,
-    cancelLate: 0,
-    noShow: 0,
     ratingSum: 29,
     reviewCount: 6,
   },
 ]
 
-export const SEED_LISTINGS: Listing[] = [
+const LISTINGS = [
   {
     id: 'l-1',
     userId: 'u-midking',
@@ -185,7 +162,6 @@ export const SEED_LISTINGS: Listing[] = [
     availableFrom: '13:00',
     availableTo: '26:00',
     createdAt: '2026-08-04T02:00:00.000Z',
-    active: true,
   },
   {
     id: 'l-2',
@@ -199,11 +175,9 @@ export const SEED_LISTINGS: Listing[] = [
     tier: '아이언',
     pricePerHour: 10000,
     region: '온라인',
-    pcbang: null,
     availableFrom: '19:00',
     availableTo: '23:00',
     createdAt: '2026-08-05T08:30:00.000Z',
-    active: true,
   },
   {
     id: 'l-3',
@@ -217,11 +191,9 @@ export const SEED_LISTINGS: Listing[] = [
     tier: '플래티넘',
     pricePerHour: 0,
     region: '온라인',
-    pcbang: null,
     availableFrom: '01:00',
     availableTo: '05:00',
     createdAt: '2026-08-05T15:10:00.000Z',
-    active: true,
   },
   {
     id: 'l-4',
@@ -235,11 +207,9 @@ export const SEED_LISTINGS: Listing[] = [
     tier: '챔피언스',
     pricePerHour: 25000,
     region: '온라인',
-    pcbang: null,
     availableFrom: '11:00',
     availableTo: '22:00',
     createdAt: '2026-08-02T05:00:00.000Z',
-    active: true,
   },
   {
     id: 'l-5',
@@ -257,7 +227,6 @@ export const SEED_LISTINGS: Listing[] = [
     availableFrom: '14:00',
     availableTo: '20:00',
     createdAt: '2026-08-06T01:20:00.000Z',
-    active: true,
   },
   {
     id: 'l-6',
@@ -275,7 +244,6 @@ export const SEED_LISTINGS: Listing[] = [
     availableFrom: '21:00',
     availableTo: '25:00',
     createdAt: '2026-08-05T11:00:00.000Z',
-    active: true,
   },
   {
     id: 'l-7',
@@ -289,11 +257,9 @@ export const SEED_LISTINGS: Listing[] = [
     tier: '복귀',
     pricePerHour: 15000,
     region: '온라인',
-    pcbang: null,
     availableFrom: '20:00',
     availableTo: '24:00',
     createdAt: '2026-08-03T12:00:00.000Z',
-    active: true,
   },
   {
     id: 'l-8',
@@ -311,11 +277,10 @@ export const SEED_LISTINGS: Listing[] = [
     availableFrom: '15:00',
     availableTo: '21:00',
     createdAt: '2026-08-01T07:00:00.000Z',
-    active: true,
   },
 ]
 
-export const SEED_BOOKINGS: Booking[] = [
+const BOOKINGS = [
   {
     id: 'b-1',
     listingId: 'l-1',
@@ -325,11 +290,9 @@ export const SEED_BOOKINGS: Booking[] = [
     hours: 2,
     amount: 40000,
     meetMode: 'ONLINE',
-    pcbang: null,
     status: 'CONFIRMED',
     checkInCode: 'LM-4821',
     createdAt: '2026-08-05T09:00:00.000Z',
-    settled: false,
   },
   {
     id: 'b-2',
@@ -340,15 +303,13 @@ export const SEED_BOOKINGS: Booking[] = [
     hours: 1,
     amount: 25000,
     meetMode: 'ONLINE',
-    pcbang: null,
     status: 'COMPLETED',
     checkInCode: 'LM-1170',
     createdAt: '2026-08-03T09:00:00.000Z',
-    settled: false,
   },
 ]
 
-export const SEED_MESSAGES: Message[] = [
+const MESSAGES = [
   {
     id: 'm-1',
     bookingId: 'b-1',
@@ -365,18 +326,7 @@ export const SEED_MESSAGES: Message[] = [
   },
 ]
 
-export const SEED_SETTLEMENTS: Settlement[] = []
-
-export const PC_BANGS = [
-  '레벨업 PC방 강남점',
-  '레벨업 PC방 신림점',
-  '레벨업 PC방 건대점',
-  '레벨업 PC방 홍대점',
-  '레벨업 PC방 분당서현점',
-]
-
-/** 요금제 — 아직 확정 전이라 뼈대만 잡아둔다. 관리자에서 바로 고칠 수 있다. */
-export const SEED_PLANS: Plan[] = [
+const PLANS = [
   {
     id: 'p-free',
     name: '무료',
@@ -386,6 +336,7 @@ export const SEED_PLANS: Plan[] = [
     features: ['글 올리기 무제한', '기본 검색', '앱 내 채팅'],
     active: true,
     note: '',
+    sortOrder: 1,
   },
   {
     id: 'p-mate-basic',
@@ -396,6 +347,7 @@ export const SEED_PLANS: Plan[] = [
     features: ['수수료 15%', '기본 노출'],
     active: true,
     note: '기본 요금제',
+    sortOrder: 2,
   },
   {
     id: 'p-mate-pro',
@@ -406,6 +358,7 @@ export const SEED_PLANS: Plan[] = [
     features: ['수수료 10%', '상단 노출', '프로필 강조', '통계 제공'],
     active: false,
     note: '검토 중',
+    sortOrder: 3,
   },
   {
     id: 'p-pcbang',
@@ -416,18 +369,69 @@ export const SEED_PLANS: Plan[] = [
     features: ['매장 노출', '체크인 연동', '이벤트 등록'],
     active: false,
     note: '요금 미확정',
+    sortOrder: 4,
   },
 ]
 
-export const SEED_ADMINS: AdminAccount[] = [
-  {
-    id: 'a-owner',
-    username: 'levelup',
-    password: 'levelup',
-    name: '최고 관리자',
-    owner: true,
-    active: true,
-    createdAt: '2026-07-01T09:00:00.000Z',
-    lastLoginAt: null,
-  },
-]
+async function main() {
+  // ── 관리자 ──────────────────────────────────────────────
+  const adminCount = await db.adminAccount.count()
+  if (adminCount === 0) {
+    const password = process.env.ADMIN_PASSWORD || 'levelup'
+    await db.adminAccount.create({
+      data: {
+        id: 'a-owner',
+        username: process.env.ADMIN_USERNAME || 'levelup',
+        passwordHash: hashPassword(password),
+        name: '최고 관리자',
+        owner: true,
+      },
+    })
+    console.log('관리자 계정을 만들었습니다.')
+    if (!process.env.ADMIN_PASSWORD) {
+      console.log('  ⚠ 비밀번호가 기본값입니다. 로그인 후 바로 바꿔주세요.')
+    }
+  }
+
+  // ── 요금제 ──────────────────────────────────────────────
+  for (const plan of PLANS) {
+    await db.plan.upsert({ where: { id: plan.id }, update: {}, create: plan })
+  }
+
+  // ── 예시 회원·글 ────────────────────────────────────────
+  // 이미 회원이 있으면 손대지 않는다. 실제 회원이 들어온 뒤에
+  // 예시 데이터가 다시 끼어들면 곤란하다.
+  if ((await db.user.count()) > 0) {
+    console.log('회원이 이미 있어 예시 데이터는 건너뜁니다.')
+    return
+  }
+
+  for (const u of USERS) {
+    await db.user.create({
+      data: {
+        ...u,
+        phoneDigits: digits(u.phone),
+        createdAt: new Date(u.createdAt),
+      },
+    })
+  }
+  for (const l of LISTINGS) {
+    await db.listing.create({ data: { ...l, createdAt: new Date(l.createdAt) } })
+  }
+  for (const b of BOOKINGS) {
+    await db.booking.create({
+      data: { ...b, startAt: new Date(b.startAt), createdAt: new Date(b.createdAt) },
+    })
+  }
+  for (const m of MESSAGES) {
+    await db.message.create({ data: { ...m, createdAt: new Date(m.createdAt) } })
+  }
+  console.log(`예시 데이터를 넣었습니다. 회원 ${USERS.length}명, 글 ${LISTINGS.length}개.`)
+}
+
+main()
+  .catch((err) => {
+    console.error(err)
+    process.exitCode = 1
+  })
+  .finally(() => db.$disconnect())

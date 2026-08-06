@@ -170,8 +170,8 @@ export default function ListingDetailPage() {
       {booking && me && (
         <BookingSheet
           onClose={() => setBooking(false)}
-          onSubmit={(input) => {
-            createBooking({
+          onSubmit={async (input) => {
+            const created = await createBooking({
               listingId: listing.id,
               memberId: me.id,
               hostId: author.id,
@@ -181,6 +181,7 @@ export default function ListingDetailPage() {
               meetMode: input.meetMode,
               pcbang: input.meetMode === 'OFFLINE' ? listing.pcbang : null,
             })
+            if (created.error) return
             setBooking(false)
             router.push('/bookings')
           }}

@@ -245,13 +245,12 @@ export type Plan = {
 /**
  * 관리자는 이용자와 완전히 분리된 계정으로 로그인한다.
  *
- * 지금은 브라우저 저장소에 두는 임시 구조라 비밀번호가 그대로 담긴다.
- * 서버 인증(DB + 해시 + 세션 쿠키)을 붙이기 전까지는 실제 운영에 쓰면 안 된다.
+ * 비밀번호는 서버에만 해시로 남는다. 화면으로는 절대 내려오지 않으므로
+ * 이 타입에도 비밀번호 항목이 없다. 바꿀 때만 새 값을 올려보낸다.
  */
 export type AdminAccount = {
   id: string
   username: string
-  password: string
   name: string
   /** 최고 관리자는 삭제할 수 없다 */
   owner: boolean

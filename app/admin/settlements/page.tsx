@@ -37,8 +37,8 @@ export default function AdminSettlementsPage() {
           <button
             type="button"
             disabled={waiting.length === 0}
-            onClick={() => {
-              const n = generateSettlements()
+            onClick={async () => {
+              const n = await generateSettlements()
               setMsg(n > 0 ? `정산 ${n}건을 만들었습니다` : '정산할 건이 없습니다')
             }}
             className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold transition hover:bg-brand-bright disabled:opacity-40"

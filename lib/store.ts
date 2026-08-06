@@ -1,103 +1,40 @@
 'use client'
 
-import { useSyncExternalStore } from 'react'
-import {
-  SEED_ADMINS,
-  SEED_BOOKINGS,
-  SEED_LISTINGS,
-  SEED_MESSAGES,
-  SEED_PLANS,
-  SEED_SETTLEMENTS,
-  SEED_USERS,
-} from './seed'
-import {
-  FEE_RATE,
-  type AdminAccount,
-  type Booking,
-  type BookingStatus,
-  type Listing,
-  type Message,
-  type Plan,
-  type Review,
-  type Settlement,
-  type User,
+import { createContext, useContext, useSyncExternalStore } from 'react'
+import { EMPTY_STATE, type State } from './state'
+import type {
+  AdminAccount,
+  Booking,
+  BookingStatus,
+  Listing,
+  Plan,
+  User,
 } from './types'
 
 /**
- * 화면을 지금 바로 굴리기 위한 클라이언트 저장소.
- * 브라우저 localStorage에 저장되며, DB(Prisma)를 붙이면 이 파일의
- * 액션 본문만 서버 호출로 바꾸면 된다. 화면 코드는 그대로 둔다.
+ * 화면이 보는 데이터 한 벌.
+ *
+ * 데이터는 전부 서버(Postgres)에 있다. 여기서는
+ *  1) 서버가 그려 보낸 첫 화면분을 그대로 받아 담고
+ *  2) 무언가 바꿀 때마다 서버에 맡긴 뒤, 돌아온 새 한 벌로 갈아끼운다.
+ *
+ * 그래서 PC 에서 쓴 글이 휴대폰에서도 보이고, 여러 사람이 같이 쓸 수 있다.
  */
 
-export type State = {
-  users: User[]
-  listings: Listing[]
-  bookings: Booking[]
-  messages: Message[]
-  reviews: Review[]
-  settlements: Settlement[]
-  plans: Plan[]
-  sessionUserId: string | null
-  admins: AdminAccount[]
-  adminSessionId: string | null
-}
+export type { State }
 
-const KEY = 'levelmate.v1'
+/** 서버 렌더가 넘겨준 첫 한 벌. 서버·클라이언트가 같은 값을 봐야 화면이 안 튄다. */
+export const InitialStateContext = createContext<State>(EMPTY_STATE)
 
-function seedState(): State {
-  return {
-    users: SEED_USERS,
-    listings: SEED_LISTINGS,
-    bookings: SEED_BOOKINGS,
-    messages: SEED_MESSAGES,
-    reviews: [],
-    settlements: SEED_SETTLEMENTS,
-    plans: SEED_PLANS,
-    sessionUserId: null,
-    admins: SEED_ADMINS,
-    adminSessionId: null,
-  }
-}
-
-/** 서버 렌더 시점의 스냅샷. 매번 같은 참조여야 한다. */
-const SERVER_STATE: State = seedState()
-
-let state: State = SERVER_STATE
-let hydrated = false
+let state: State = EMPTY_STATE
 const listeners = new Set<() => void>()
 
 function emit() {
   for (const l of listeners) l()
 }
 
-function persist() {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state))
-  } catch {
-    // 시크릿 모드 등에서 저장이 막혀도 화면은 계속 동작해야 한다.
-  }
-}
-
-function set(next: Partial<State>) {
-  state = { ...state, ...next }
-  persist()
-  emit()
-}
-
-export function hydrateStore() {
-  if (hydrated) return
-  hydrated = true
-  try {
-    const raw = localStorage.getItem(KEY)
-    if (raw) {
-      const saved = JSON.parse(raw) as Partial<State>
-      state = { ...seedState(), ...saved }
-    } else {
-      state = seedState()
-    }
-  } catch {
-    state = seedState()
-  }
+function set(next: State) {
+  state = next
   emit()
 }
 
@@ -106,69 +43,113 @@ function subscribe(cb: () => void) {
   return () => listeners.delete(cb)
 }
 
+/**
+ * 서버가 넘겨준 첫 한 벌을 받아 담는다.
+ *
+ * 서버에서는 절대 담지 않는다. 모듈 변수는 요청끼리 공유되기 때문에
+ * 담아버리면 다른 사람의 화면이 섞인다.
+ */
+export function adoptInitialState(next: State) {
+  if (typeof window === 'undefined') return
+  if (state.loaded) return
+  state = next
+}
+
 export function useStore(): State {
-  return useSyncExternalStore(
+  const initial = useContext(InitialStateContext)
+  const snapshot = useSyncExternalStore(
     subscribe,
     () => state,
-    () => SERVER_STATE,
+    () => initial,
   )
+  return snapshot.loaded ? snapshot : initial
 }
 
 export function getState() {
   return state
 }
 
-let seq = 0
-function id(prefix: string) {
-  seq += 1
-  return `${prefix}-${Date.now().toString(36)}${seq.toString(36)}`
+// ─────────────────────────── 알림 ───────────────────────────
+
+/** 실패했을 때 조용히 넘어가지 않게 화면 위에 띄운다. */
+let notice: string | null = null
+const noticeListeners = new Set<() => void>()
+
+export function showNotice(message: string | null) {
+  notice = message
+  for (const l of noticeListeners) l()
 }
 
-function hueFromPhone(phone: string) {
-  let h = 0
-  for (const ch of phone) h = (h * 31 + ch.charCodeAt(0)) % 360
-  return h
+export function useNotice(): string | null {
+  return useSyncExternalStore(
+    (cb) => {
+      noticeListeners.add(cb)
+      return () => noticeListeners.delete(cb)
+    },
+    () => notice,
+    () => null,
+  )
 }
+
+// ─────────────────────────── 서버 호출 ───────────────────────────
+
+function newId(prefix: string) {
+  const rand =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID().replace(/-/g, '')
+      : Math.random().toString(36).slice(2) + Date.now().toString(36)
+  return `${prefix}-${rand.slice(0, 20)}`
+}
+
+/** 서버에서 데이터 한 벌을 다시 받아온다. */
+export async function refresh() {
+  try {
+    const res = await fetch('/api/state', { cache: 'no-store' })
+    if (res.ok) set((await res.json()) as State)
+  } catch {
+    // 잠깐 끊긴 것뿐이라면 화면은 그대로 두는 편이 낫다
+  }
+}
+
+type Result = string | null
+
+async function post(url: string, body: unknown): Promise<Result> {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const data = (await res.json().catch(() => ({}))) as { state?: State; error?: string }
+
+    if (!res.ok) {
+      const message = data.error || '처리하지 못했습니다'
+      showNotice(message)
+      // 미리 바꿔둔 화면이 있으면 서버 기준으로 되돌린다
+      await refresh()
+      return message
+    }
+    if (data.state) set(data.state)
+    return null
+  } catch {
+    const message = '서버에 연결하지 못했습니다'
+    showNotice(message)
+    return message
+  }
+}
+
+const act = (type: string, payload: Record<string, unknown> = {}) =>
+  post('/api/action', { type, payload })
 
 // ─────────────────────────── 인증 ───────────────────────────
 
-/** 휴대폰 번호로 로그인. 없으면 새로 만든다. (실제 본인인증 연동 전 임시) */
-export function login(phone: string, nickname?: string): User {
-  const normalized = phone.replace(/[^0-9]/g, '')
-  const pretty = normalized.replace(/^(\d{3})(\d{3,4})(\d{4})$/, '$1-$2-$3')
-
-  const existing = state.users.find((u) => u.phone.replace(/[^0-9]/g, '') === normalized)
-  if (existing) {
-    set({ sessionUserId: existing.id })
-    return existing
-  }
-
-  const user: User = {
-    id: id('u'),
-    nickname: nickname?.trim() || `게이머${normalized.slice(-4)}`,
-    hue: hueFromPhone(normalized),
-    phone: pretty,
-    verified: true, // 인증번호 확인을 마친 상태로 본다
-    role: 'MEMBER',
-    region: '온라인',
-    intro: '',
-    photoUrl: null,
-    photoStatus: 'NONE',
-    createdAt: new Date().toISOString(),
-    bannedAt: null,
-    kept: 0,
-    late: 0,
-    cancelLate: 0,
-    noShow: 0,
-    ratingSum: 0,
-    reviewCount: 0,
-  }
-  set({ users: [...state.users, user], sessionUserId: user.id })
-  return user
+/** 휴대폰 번호로 로그인. 없으면 새로 만든다. */
+export function login(phone: string, nickname?: string): Promise<Result> {
+  return post('/api/auth/login', { phone, nickname })
 }
 
-export function logout() {
-  set({ sessionUserId: null })
+export function logout(): Promise<Result> {
+  return post('/api/auth/logout', {})
 }
 
 export function currentUser(s: State = state): User | null {
@@ -176,48 +157,35 @@ export function currentUser(s: State = state): User | null {
   return s.users.find((u) => u.id === s.sessionUserId) ?? null
 }
 
-export function updateProfile(userId: string, patch: Partial<User>) {
-  set({ users: state.users.map((u) => (u.id === userId ? { ...u, ...patch } : u)) })
+export function updateProfile(userId: string, patch: Partial<User>): Promise<Result> {
+  return act('profile.update', { userId, patch })
 }
 
 // ─────────────────────────── 게시글 ───────────────────────────
 
-export function createListing(input: Omit<Listing, 'id' | 'createdAt' | 'active'>): Listing {
-  const listing: Listing = {
-    ...input,
-    id: id('l'),
-    createdAt: new Date().toISOString(),
-    active: true,
-  }
-  set({ listings: [listing, ...state.listings] })
-  return listing
+export async function createListing(
+  input: Omit<Listing, 'id' | 'createdAt' | 'active'>,
+): Promise<{ id: string; error: Result }> {
+  const id = newId('l')
+  const error = await act('listing.create', { listing: { ...input, id } })
+  return { id, error }
 }
 
-export function updateListing(listingId: string, patch: Partial<Listing>) {
-  set({
-    listings: state.listings.map((l) => (l.id === listingId ? { ...l, ...patch } : l)),
-  })
+export function updateListing(listingId: string, patch: Partial<Listing>): Promise<Result> {
+  return act('listing.update', { listingId, patch })
 }
 
-export function toggleListing(listingId: string) {
-  set({
-    listings: state.listings.map((l) =>
-      l.id === listingId ? { ...l, active: !l.active } : l,
-    ),
-  })
+export function toggleListing(listingId: string): Promise<Result> {
+  return act('listing.toggle', { listingId })
 }
 
-export function deleteListing(listingId: string) {
-  set({ listings: state.listings.filter((l) => l.id !== listingId) })
+export function deleteListing(listingId: string): Promise<Result> {
+  return act('listing.delete', { listingId })
 }
 
 // ─────────────────────────── 예약 ───────────────────────────
 
-function checkInCode() {
-  return `LM-${Math.floor(1000 + Math.random() * 9000)}`
-}
-
-export function createBooking(input: {
+export async function createBooking(input: {
   listingId: string
   memberId: string
   hostId: string
@@ -226,63 +194,37 @@ export function createBooking(input: {
   amount: number
   meetMode: Booking['meetMode']
   pcbang: string | null
-}): Booking {
-  const booking: Booking = {
-    ...input,
-    id: id('b'),
-    status: 'REQUESTED',
-    checkInCode: checkInCode(),
-    createdAt: new Date().toISOString(),
-    settled: false,
-  }
-  set({ bookings: [booking, ...state.bookings] })
-  return booking
+}): Promise<{ id: string; error: Result }> {
+  const id = newId('b')
+  const error = await act('booking.create', { booking: { ...input, id } })
+  return { id, error }
 }
 
-/**
- * 예약 상태 변경. 완료/노쇼/임박취소는 약속 이행 지표에 그대로 반영된다.
- * 지표가 바뀌면 약속 점수도 같이 움직인다.
- */
-export function setBookingStatus(bookingId: string, status: BookingStatus) {
-  const booking = state.bookings.find((b) => b.id === bookingId)
-  if (!booking) return
-
-  let users = state.users
-  const bump = (userId: string, field: 'kept' | 'late' | 'cancelLate' | 'noShow') => {
-    users = users.map((u) => (u.id === userId ? { ...u, [field]: u[field] + 1 } : u))
-  }
-
-  if (status === 'COMPLETED' && booking.status !== 'COMPLETED') {
-    bump(booking.hostId, 'kept')
-    bump(booking.memberId, 'kept')
-  }
-  if (status === 'NO_SHOW' && booking.status !== 'NO_SHOW') {
-    bump(booking.hostId, 'noShow')
-  }
-  if (status === 'CANCELLED' && booking.status === 'CONFIRMED') {
-    // 확정된 약속을 취소한 것은 임박 취소로 본다
-    bump(booking.memberId, 'cancelLate')
-  }
-
-  set({
-    users,
-    bookings: state.bookings.map((b) => (b.id === bookingId ? { ...b, status } : b)),
-  })
+/** 완료·노쇼·임박취소는 서버에서 약속 이행 지표에 그대로 반영된다. */
+export function setBookingStatus(bookingId: string, status: BookingStatus): Promise<Result> {
+  return act('booking.status', { bookingId, status })
 }
 
 // ─────────────────────────── 대화 ───────────────────────────
 
-export function sendMessage(bookingId: string, senderId: string, body: string) {
+export async function sendMessage(
+  bookingId: string,
+  senderId: string,
+  body: string,
+): Promise<Result> {
   const text = body.trim()
-  if (!text) return
-  const message: Message = {
-    id: id('m'),
-    bookingId,
-    senderId,
-    body: text,
-    createdAt: new Date().toISOString(),
-  }
-  set({ messages: [...state.messages, message] })
+  if (!text) return null
+
+  const id = newId('m')
+  // 대화는 기다렸다 뜨면 답답하다. 먼저 붙여놓고 서버 결과로 맞춘다.
+  set({
+    ...state,
+    messages: [
+      ...state.messages,
+      { id, bookingId, senderId, body: text, createdAt: new Date().toISOString() },
+    ],
+  })
+  return act('message.send', { id, bookingId, body: text })
 }
 
 // ─────────────────────────── 후기 ───────────────────────────
@@ -293,114 +235,61 @@ export function addReview(input: {
   targetId: string
   rating: number
   comment: string
-}) {
-  const review: Review = { ...input, id: id('r'), createdAt: new Date().toISOString() }
-  set({
-    reviews: [...state.reviews, review],
-    users: state.users.map((u) =>
-      u.id === input.targetId
-        ? { ...u, ratingSum: u.ratingSum + input.rating, reviewCount: u.reviewCount + 1 }
-        : u,
-    ),
-  })
+}): Promise<Result> {
+  return act('review.add', { ...input, id: newId('r') })
+}
+
+// ─────────────────────────── 사진 ───────────────────────────
+
+/** 브라우저에서 잘라 만든 사진을 서버에 올린다. */
+export function uploadPhoto(userId: string, dataUrl: string): Promise<Result> {
+  return post('/api/photos', { userId, dataUrl })
+}
+
+export function removePhoto(userId: string): Promise<Result> {
+  return act('profile.update', { userId, patch: { photoUrl: null, photoStatus: 'NONE' } })
 }
 
 // ─────────────────────────── 운영 ───────────────────────────
 
-export function verifyUser(userId: string, verified: boolean) {
-  updateProfile(userId, { verified })
+export function verifyUser(userId: string, verified: boolean): Promise<Result> {
+  return act('user.verify', { userId, verified })
 }
 
-export function banUser(userId: string, banned: boolean) {
-  updateProfile(userId, { bannedAt: banned ? new Date().toISOString() : null })
+export function banUser(userId: string, banned: boolean): Promise<Result> {
+  return act('user.ban', { userId, banned })
 }
 
-/** 회원 삭제. 남은 글·예약·대화도 같이 정리한다. */
-export function deleteUser(userId: string) {
-  const bookingIds = new Set(
-    state.bookings.filter((b) => b.memberId === userId || b.hostId === userId).map((b) => b.id),
-  )
-  set({
-    users: state.users.filter((u) => u.id !== userId),
-    listings: state.listings.filter((l) => l.userId !== userId),
-    bookings: state.bookings.filter((b) => !bookingIds.has(b.id)),
-    messages: state.messages.filter((m) => !bookingIds.has(m.bookingId)),
-    reviews: state.reviews.filter((r) => r.authorId !== userId && r.targetId !== userId),
-    sessionUserId: state.sessionUserId === userId ? null : state.sessionUserId,
-  })
+export function deleteUser(userId: string): Promise<Result> {
+  return act('user.delete', { userId })
 }
 
-export function setPhotoStatus(userId: string, status: User['photoStatus']) {
-  updateProfile(userId, { photoStatus: status })
+export function setPhotoStatus(userId: string, status: User['photoStatus']): Promise<Result> {
+  return act('user.photoStatus', { userId, status })
 }
 
 // ─────────────────────────── 정산 ───────────────────────────
 
 /** 완료됐지만 아직 정산되지 않은 유료 예약을 호스트별로 묶는다. */
-export function generateSettlements(): number {
-  const targets = state.bookings.filter(
-    (b) => b.status === 'COMPLETED' && !b.settled && b.amount > 0,
-  )
-  if (targets.length === 0) return 0
-
-  const byHost = new Map<string, Booking[]>()
-  for (const b of targets) {
-    const list = byHost.get(b.hostId) ?? []
-    list.push(b)
-    byHost.set(b.hostId, list)
-  }
-
-  const created: Settlement[] = []
-  for (const [hostId, list] of byHost) {
-    const gross = list.reduce((sum, b) => sum + b.amount, 0)
-    const fee = Math.round(gross * FEE_RATE)
-    created.push({
-      id: id('s'),
-      hostId,
-      bookingIds: list.map((b) => b.id),
-      gross,
-      fee,
-      net: gross - fee,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      paidAt: null,
-    })
-  }
-
-  const settledIds = new Set(targets.map((b) => b.id))
-  set({
-    settlements: [...created, ...state.settlements],
-    bookings: state.bookings.map((b) => (settledIds.has(b.id) ? { ...b, settled: true } : b)),
-  })
-  return created.length
+export async function generateSettlements(): Promise<number> {
+  const before = state.settlements.length
+  const error = await act('settlement.generate')
+  if (error) return 0
+  return Math.max(0, state.settlements.length - before)
 }
 
-export function paySettlement(settlementId: string) {
-  set({
-    settlements: state.settlements.map((s) =>
-      s.id === settlementId ? { ...s, status: 'PAID', paidAt: new Date().toISOString() } : s,
-    ),
-  })
+export function paySettlement(settlementId: string): Promise<Result> {
+  return act('settlement.pay', { settlementId })
 }
 
 // ─────────────────────────── 관리자 계정 ───────────────────────────
 
-export function adminLogin(username: string, password: string): AdminAccount | null {
-  const found = state.admins.find(
-    (a) => a.username === username.trim() && a.password === password && a.active,
-  )
-  if (!found) return null
-  set({
-    adminSessionId: found.id,
-    admins: state.admins.map((a) =>
-      a.id === found.id ? { ...a, lastLoginAt: new Date().toISOString() } : a,
-    ),
-  })
-  return found
+export function adminLogin(username: string, password: string): Promise<Result> {
+  return post('/api/admin/login', { username, password })
 }
 
-export function adminLogout() {
-  set({ adminSessionId: null })
+export function adminLogout(): Promise<Result> {
+  return post('/api/admin/logout', {})
 }
 
 export function currentAdmin(s: State = state): AdminAccount | null {
@@ -408,44 +297,25 @@ export function currentAdmin(s: State = state): AdminAccount | null {
   return s.admins.find((a) => a.id === s.adminSessionId) ?? null
 }
 
-export function createAdmin(input: { username: string; password: string; name: string }): string | null {
-  const username = input.username.trim()
-  if (!username || !input.password) return '아이디와 비밀번호를 입력해주세요'
-  if (state.admins.some((a) => a.username === username)) return '이미 있는 아이디입니다'
-
-  const admin: AdminAccount = {
-    id: id('a'),
-    username,
-    password: input.password,
-    name: input.name.trim() || username,
-    owner: false,
-    active: true,
-    createdAt: new Date().toISOString(),
-    lastLoginAt: null,
-  }
-  set({ admins: [...state.admins, admin] })
-  return null
+export function createAdmin(input: {
+  username: string
+  password: string
+  name: string
+}): Promise<Result> {
+  return act('admin.create', { ...input, id: newId('a') })
 }
 
-export function updateAdmin(adminId: string, patch: Partial<AdminAccount>) {
-  set({ admins: state.admins.map((a) => (a.id === adminId ? { ...a, ...patch } : a)) })
+export function updateAdmin(
+  adminId: string,
+  patch: Partial<AdminAccount> & { password?: string },
+): Promise<Result> {
+  return act('admin.update', { adminId, patch })
 }
 
-export function deleteAdmin(adminId: string) {
-  const target = state.admins.find((a) => a.id === adminId)
-  if (!target || target.owner) return // 최고 관리자는 지울 수 없다
-  set({
-    admins: state.admins.filter((a) => a.id !== adminId),
-    adminSessionId: state.adminSessionId === adminId ? null : state.adminSessionId,
-  })
+export function deleteAdmin(adminId: string): Promise<Result> {
+  return act('admin.delete', { adminId })
 }
 
-export function updatePlan(planId: string, patch: Partial<Plan>) {
-  set({ plans: state.plans.map((p) => (p.id === planId ? { ...p, ...patch } : p)) })
-}
-
-export function resetStore() {
-  state = seedState()
-  persist()
-  emit()
+export function updatePlan(planId: string, patch: Partial<Plan>): Promise<Result> {
+  return act('plan.update', { planId, patch })
 }

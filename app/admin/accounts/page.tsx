@@ -24,11 +24,11 @@ export default function AdminAccountsPage() {
     <>
       <PageTitle title="관리자 계정" desc="추가 · 수정 · 삭제" />
 
-      <p className="mb-4 flex gap-2 rounded-2xl border border-[#fbbf24]/25 bg-[#fbbf24]/8 px-4 py-3 text-[11px] leading-relaxed text-muted">
-        <Icon name="alert" className="mt-0.5 size-3.5 shrink-0 text-[#fbbf24]" />
+      <p className="mb-4 flex gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-[11px] leading-relaxed text-muted">
+        <Icon name="info" className="mt-0.5 size-3.5 shrink-0 text-dim" />
         <span>
-          지금은 계정과 비밀번호가 <b className="text-white">브라우저 저장소</b>에 그대로 담깁니다.
-          실제 운영 전에 서버 인증(비밀번호 해시 · 세션 쿠키 · 접속 기록)으로 반드시 바꿔야 합니다.
+          비밀번호는 서버에 <b className="text-white">해시로만</b> 남습니다. 다시 꺼내 볼 수 없으니
+          잊으면 여기서 새로 정해야 합니다. 비밀번호를 바꾸면 그 계정의 다른 로그인은 모두 끊깁니다.
         </span>
       </p>
 
@@ -82,8 +82,8 @@ export default function AdminAccountsPage() {
 
             <button
               type="button"
-              onClick={() => {
-                const err = createAdmin(form)
+              onClick={async () => {
+                const err = await createAdmin(form)
                 if (err) return setError(err)
                 setAdding(false)
                 setForm({ username: '', password: '', name: '' })
@@ -123,7 +123,7 @@ function Row({
   open: boolean
   onToggle: () => void
 }) {
-  const [d, setD] = useState({ name: admin.name, password: admin.password })
+  const [d, setD] = useState({ name: admin.name, password: '' })
 
   return (
     <div className="rounded-xl border border-line bg-white/3 p-3.5">
@@ -183,23 +183,25 @@ function Row({
                 className="w-full bg-transparent text-sm outline-none"
               />
             </Field>
-            <Field label="비밀번호">
+            <Field label="새 비밀번호 (바꿀 때만)">
               <input
-                type="text"
+                type="password"
                 value={d.password}
                 onChange={(e) => setD({ ...d, password: e.target.value })}
-                autoComplete="off"
-                className="w-full bg-transparent text-sm outline-none"
+                placeholder="그대로 두려면 비워두세요"
+                autoComplete="new-password"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
               />
             </Field>
           </div>
           <button
             type="button"
-            onClick={() => {
-              updateAdmin(admin.id, {
+            onClick={async () => {
+              await updateAdmin(admin.id, {
                 name: d.name.trim() || admin.name,
-                password: d.password || admin.password,
+                ...(d.password ? { password: d.password } : {}),
               })
+              setD({ name: d.name, password: '' })
               onToggle()
             }}
             className="rounded-xl bg-brand py-2.5 text-xs font-bold transition hover:bg-brand-bright"

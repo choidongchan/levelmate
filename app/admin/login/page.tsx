@@ -10,12 +10,15 @@ export default function AdminLoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const submit = () => {
+  const submit = async () => {
     setError('')
-    const ok = adminLogin(username, password)
-    if (ok) router.replace('/admin')
-    else setError('아이디 또는 비밀번호가 맞지 않습니다')
+    setBusy(true)
+    const failed = await adminLogin(username, password)
+    setBusy(false)
+    if (failed) setError(failed)
+    else router.replace('/admin')
   }
 
   return (
@@ -69,18 +72,18 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            disabled={!username || !password}
+            disabled={!username || !password || busy}
             className="mt-1 rounded-2xl bg-brand py-3.5 text-sm font-bold transition hover:bg-brand-bright disabled:opacity-40"
           >
-            로그인
+            {busy ? '확인 중…' : '로그인'}
           </button>
         </form>
 
         <p className="mt-5 flex gap-2 rounded-2xl border border-[#fbbf24]/25 bg-[#fbbf24]/8 px-4 py-3 text-[11px] leading-relaxed text-muted">
           <Icon name="info" className="mt-0.5 size-3.5 shrink-0 text-[#fbbf24]" />
           <span>
-            지금은 계정 정보가 브라우저에 저장되는 임시 구조입니다. 실제 운영 전에
-            서버 인증(비밀번호 해시 · 세션)으로 반드시 교체해야 합니다.
+            비밀번호는 서버에만 해시로 남고, 로그인 상태는 브라우저가 읽을 수 없는
+            쿠키로 유지됩니다. 기본 비밀번호를 쓰고 있다면 로그인 후 바로 바꿔주세요.
           </span>
         </p>
       </div>

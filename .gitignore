@@ -42,3 +42,6 @@ yarn-error.log*
 # 배포 중 임시 산출물
 node_modules.previous/
 .deps-new/
+
+# 올라온 프로필 사진 (로컬 개발용)
+/.uploads

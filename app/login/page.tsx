@@ -25,6 +25,7 @@ function LoginScreen() {
   const [code, setCode] = useState('')
   const [nickname, setNickname] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const digits = phone.replace(/[^0-9]/g, '')
   const phoneValid = digits.length >= 10 && digits.startsWith('01')
@@ -97,18 +98,18 @@ function LoginScreen() {
 
             <button
               type="button"
-              disabled={code.length !== 6}
-              onClick={() => {
-                try {
-                  login(phone, nickname)
-                  router.replace(next)
-                } catch {
-                  setError('로그인에 실패했어요. 다시 시도해주세요.')
-                }
+              disabled={code.length !== 6 || busy}
+              onClick={async () => {
+                setError('')
+                setBusy(true)
+                const failed = await login(phone, nickname)
+                setBusy(false)
+                if (failed) setError(failed)
+                else router.replace(next)
               }}
               className="cta rounded-full py-4 text-sm font-black transition active:scale-[0.99] disabled:opacity-40"
             >
-              인증하고 시작하기
+              {busy ? '확인 중…' : '인증하고 시작하기'}
             </button>
 
             <button

@@ -3,8 +3,15 @@
 import { useState } from 'react'
 import { Icon } from './icon'
 import { PhotoPicker } from './photo-picker'
-import { deleteListing, toggleListing, updateListing, updateProfile } from '@/lib/store'
-import { PC_BANGS } from '@/lib/seed'
+import {
+  deleteListing,
+  removePhoto,
+  toggleListing,
+  updateListing,
+  updateProfile,
+  uploadPhoto,
+} from '@/lib/store'
+import { PC_BANGS } from '@/lib/pcbangs'
 import {
   GAMES,
   LISTING_KINDS,
@@ -22,7 +29,10 @@ export function UserEditForm({ user, onDone }: { user: User; onDone: () => void 
   const [nickname, setNickname] = useState(user.nickname)
   const [region, setRegion] = useState(user.region)
   const [intro, setIntro] = useState(user.intro)
-  const [photoUrl, setPhotoUrl] = useState(user.photoUrl ?? '')
+  // 올린 사진은 /api/photos/… 주소라 손으로 고칠 일이 없다. 직접 넣은 경로만 다룬다.
+  const [photoPath, setPhotoPath] = useState(
+    user.photoUrl?.startsWith('/api/') ? '' : (user.photoUrl ?? ''),
+  )
   const [role, setRole] = useState(user.role)
 
   return (
@@ -61,26 +71,35 @@ export function UserEditForm({ user, onDone }: { user: User; onDone: () => void 
       </Field>
 
       <PhotoPicker
-        value={photoUrl || null}
+        value={user.photoUrl}
         nickname={nickname}
-        onPick={(dataUrl) => {
-          setPhotoUrl(dataUrl)
-          // 고른 즉시 반영되게 한다. 저장 버튼을 눌러야 반영되면 헷갈린다.
-          updateProfile(user.id, { photoUrl: dataUrl, photoStatus: 'APPROVED' })
-        }}
-        onClear={() => {
-          setPhotoUrl('')
-          updateProfile(user.id, { photoUrl: null, photoStatus: 'NONE' })
-        }}
+        // 고른 즉시 서버로 올린다. 저장 버튼을 눌러야 반영되면 헷갈린다.
+        onPick={(dataUrl) => uploadPhoto(user.id, dataUrl)}
+        onClear={() => removePhoto(user.id)}
       />
 
       <Field label="또는 사진 경로 직접 입력 (public/mates/ 에 올린 파일)">
-        <input
-          value={photoUrl.startsWith('data:') ? '' : photoUrl}
-          onChange={(e) => setPhotoUrl(e.target.value)}
-          placeholder="/mates/midking.jpg"
-          className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            value={photoPath}
+            onChange={(e) => setPhotoPath(e.target.value)}
+            placeholder="/mates/midking.jpg"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-dim"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const url = photoPath.trim()
+              updateProfile(user.id, {
+                photoUrl: url || null,
+                photoStatus: url ? 'APPROVED' : 'NONE',
+              })
+            }}
+            className="shrink-0 rounded-lg bg-white/8 px-3 py-1.5 text-[11px] font-bold transition hover:bg-white/14"
+          >
+            적용
+          </button>
+        </div>
       </Field>
 
       <Field label="권한">
@@ -101,14 +120,11 @@ export function UserEditForm({ user, onDone }: { user: User; onDone: () => void 
       <div className="mt-1 flex gap-2">
         <button
           type="button"
-          onClick={() => {
-            const url = photoUrl.trim()
-            updateProfile(user.id, {
+          onClick={async () => {
+            await updateProfile(user.id, {
               nickname: nickname.trim() || user.nickname,
               region,
               intro,
-              photoUrl: url || null,
-              photoStatus: url ? 'APPROVED' : 'NONE',
               role,
             })
             onDone()

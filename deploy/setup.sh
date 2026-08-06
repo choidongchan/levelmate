@@ -79,6 +79,8 @@ if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$APP'"
 else
   ok "DB가 이미 있습니다"
 fi
+# Postgres 15 부터는 public 스키마에 표를 만들 권한이 기본으로 없다.
+sudo -u postgres psql -q -d "$APP" -c "GRANT ALL ON SCHEMA public TO \"$APP\";" >/dev/null
 
 # ── 4. 코드 ───────────────────────────────────────────────────────
 log "코드 받기"
@@ -102,10 +104,13 @@ else
   cat > "$ENV_FILE" <<EOF
 DATABASE_URL="postgresql://$APP:$DB_PASS@127.0.0.1:5432/$APP?schema=public"
 NEXT_PUBLIC_SITE_URL="https://$DOMAIN"
+UPLOAD_DIR="$APP_DIR/uploads"
 PORT=$APP_PORT
 EOF
   ok ".env 생성"
 fi
+mkdir -p "$APP_DIR/uploads"
+chown "$APP_USER:$APP_USER" "$APP_DIR/uploads"
 chown "$APP_USER:$APP_USER" "$ENV_FILE"
 chmod 600 "$ENV_FILE"
 
@@ -114,6 +119,9 @@ chmod 600 "$ENV_FILE"
 log "설치 및 빌드 (몇 분 걸립니다)"
 cd "$APP_DIR"
 sudo -u "$APP_USER" nice -n 19 ionice -c3 npm ci
+sudo -u "$APP_USER" npx prisma generate
+sudo -u "$APP_USER" npx prisma migrate deploy
+sudo -u "$APP_USER" node prisma/seed.mjs
 sudo -u "$APP_USER" nice -n 19 ionice -c3 npm run build
 ok "빌드 완료"
 
