@@ -43,13 +43,15 @@ export default function MateDetailPage() {
     <>
       <ScreenHeader title="메이트 상세" />
 
+      {/* 사진이 먼저 보이도록 화면 폭을 가득 채운다 */}
+      <UserArt
+        user={user}
+        className="aspect-[4/5] w-full md:aspect-[16/9] md:rounded-3xl"
+        sizes="(max-width: 768px) 100vw, 640px"
+        priority
+      />
+
       <main className="flex flex-col gap-5 px-4 pt-4">
-        <UserArt
-          user={user}
-          className="h-72 w-full rounded-3xl"
-          sizes="(max-width: 768px) 100vw, 480px"
-          priority
-        />
 
         <section>
           <span className="inline-flex items-center gap-1.5 text-[11px]">

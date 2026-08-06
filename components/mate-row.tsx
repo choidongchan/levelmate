@@ -21,17 +21,17 @@ export function MateRow({
   return (
     <Link
       href={`/users/${user.id}`}
-      className="rise flex items-center gap-3 rounded-2xl bg-surface p-3 transition hover:bg-surface-2 active:scale-[0.99]"
+      className="rise flex items-stretch gap-3 rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99]"
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
       <UserArt
         user={user}
-        className="size-14 shrink-0 rounded-2xl"
-        sizes="56px"
-        priority={index < 3}
+        className="aspect-[3/4] w-[4.75rem] shrink-0 rounded-xl"
+        sizes="80px"
+        priority={index < 4}
       />
 
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col justify-center">
         <div className="flex items-center gap-2">
           <span className="truncate font-semibold">{user.nickname}</span>
           <span className="flex shrink-0 items-center gap-1 text-[11px]">
@@ -45,7 +45,7 @@ export function MateRow({
         <p className="mt-1 truncate text-xs text-dim">{listing.title}</p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
+      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1">
         <span className="inline-flex items-center gap-1 text-xs">
           <Icon name="star" className="size-3.5 text-star" />
           <span className="font-semibold tabular-nums">{rating?.toFixed(1) ?? '신규'}</span>
