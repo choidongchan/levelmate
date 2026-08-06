@@ -6,10 +6,10 @@
 export function mateMesh(hue: number): string {
   const h = (n: number) => (hue + n) % 360
   return [
-    `radial-gradient(60% 60% at 22% 16%, hsl(${h(0)} 88% 62% / 0.9), transparent 62%)`,
-    `radial-gradient(52% 52% at 84% 22%, hsl(${h(45)} 92% 58% / 0.8), transparent 64%)`,
-    `radial-gradient(74% 72% at 62% 98%, hsl(${h(300)} 82% 46% / 0.75), transparent 66%)`,
-    `linear-gradient(165deg, hsl(${h(20)} 45% 16%), hsl(${h(0)} 50% 7%))`,
+    `radial-gradient(62% 62% at 24% 14%, hsl(${h(0)} 92% 66% / 0.95), transparent 64%)`,
+    `radial-gradient(56% 56% at 86% 24%, hsl(${h(45)} 95% 62% / 0.9), transparent 66%)`,
+    `radial-gradient(70% 70% at 58% 92%, hsl(${h(310)} 88% 52% / 0.8), transparent 68%)`,
+    `linear-gradient(165deg, hsl(${h(20)} 60% 26%), hsl(${h(0)} 55% 12%))`,
   ].join(', ')
 }
 

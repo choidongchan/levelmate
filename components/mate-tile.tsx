@@ -13,7 +13,8 @@ export function MateTile({ mate, index = 0 }: { mate: Mate; index?: number }) {
       style={{ animationDelay: `${Math.min(index, 6) * 55}ms` }}
     >
       <MateArt hue={mate.hue} className="absolute inset-0 transition duration-500 group-hover:scale-105" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10" />
+      {/* 아래쪽만 진하게 눌러 글자를 읽히게 하고, 위쪽 색은 최대한 살린다 */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/88 via-black/10 to-transparent" />
 
       <div className="absolute inset-x-2.5 top-2.5 flex items-start justify-between">
         {mate.online && (
