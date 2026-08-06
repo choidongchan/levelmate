@@ -23,16 +23,45 @@ export function StoreProvider({
     <InitialStateContext.Provider value={initial}>
       {children}
       <Notice />
-      <Revalidate loaded={initial.loaded} />
+      <Live loaded={initial.loaded} />
     </InitialStateContext.Provider>
   )
 }
 
-/** 서버가 데이터를 못 실어 보냈으면(DB 가 잠깐 안 됐다면) 브라우저에서 다시 받아온다. */
-function Revalidate({ loaded }: { loaded: boolean }) {
+/** 화면을 켜둔 채로도 새 글·새 회원·새 메시지가 들어오게 한다. */
+const POLL_MS = 15000
+
+function Live({ loaded }: { loaded: boolean }) {
   useEffect(() => {
+    // 서버가 데이터를 못 실어 보냈으면(DB 가 잠깐 안 됐다면) 바로 다시 받아온다
     if (!loaded) void refresh()
+
+    let last = Date.now()
+    const tick = () => {
+      // 보이지 않는 탭까지 계속 물어보면 서버만 괴롭다
+      if (document.visibilityState !== 'visible') return
+      last = Date.now()
+      void refresh()
+    }
+
+    const timer = setInterval(tick, POLL_MS)
+
+    // 다른 일 하다가 돌아왔을 때는 기다리지 않고 바로 맞춘다
+    const onWake = () => {
+      if (document.visibilityState !== 'visible') return
+      if (Date.now() - last < 3000) return
+      tick()
+    }
+    document.addEventListener('visibilitychange', onWake)
+    window.addEventListener('focus', onWake)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', onWake)
+      window.removeEventListener('focus', onWake)
+    }
   }, [loaded])
+
   return null
 }
 

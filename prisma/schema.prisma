@@ -252,6 +252,21 @@ model Plan {
   @@index([target])
 }
 
+/// 올라온 사진.
+///
+/// 파일로 두지 않고 DB 에 담는다. 파일로 두면 저장 경로·권한·배포 방식이
+/// 하나만 어긋나도 사진이 조용히 사라지고, 올린 사람 브라우저에는 캐시가 남아
+/// 있어서 본인만 멀쩡히 보인다. 그 상태는 알아채기가 아주 어렵다.
+/// DB 에 담으면 백업(pg_dump)에도 같이 들어간다.
+model Photo {
+  /// 내용의 지문 + 확장자. 같은 사진은 같은 이름이 된다.
+  id        String   @id
+  mime      String
+  data      Bytes
+  bytes     Int
+  createdAt DateTime @default(now())
+}
+
 /// 관리자 계정. 이용자와 완전히 분리된 로그인이다.
 model AdminAccount {
   id       String @id

@@ -23,16 +23,25 @@ export function UserArt({
 }) {
   const [failed, setFailed] = useState(false)
   const showPhoto = user.photoUrl && user.photoStatus === 'APPROVED' && !failed
-  // 관리자가 브라우저에서 만든 사진은 data URL 이라 next/image 로 다룰 수 없다
-  const isData = user.photoUrl?.startsWith('data:')
+
+  /**
+   * 올린 사진(/api/photos/…)은 이미 720×960 WebP 로 만들어 둔 것이라
+   * 다시 줄일 게 없다. 굳이 이미지 최적화를 거치면 실패할 구석만 하나 더 생기고,
+   * 실패하면 조용히 캐릭터로 바뀌어서 "사진이 왜 안 나오지"가 된다.
+   * data URL 도 최적화 대상이 아니다.
+   */
+  const asIs =
+    user.photoUrl?.startsWith('data:') || user.photoUrl?.startsWith('/api/photos/')
 
   return (
     <div className={`relative overflow-hidden bg-surface ${className}`}>
-      {showPhoto && isData ? (
+      {showPhoto && asIs ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={user.photoUrl!}
           alt={`${user.nickname} 프로필 사진`}
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
           className="size-full object-cover"
           onError={() => setFailed(true)}
         />

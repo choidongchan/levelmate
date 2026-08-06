@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Icon } from './icon'
 
 /** 카드·프로필 모두 세로형이라 3:4 로 담는다. */
@@ -263,7 +264,9 @@ function CropEditor({
     }
   }
 
-  return (
+  // 편집 창은 body 에 직접 붙인다. 부모 카드에 backdrop-filter 가 걸려 있으면
+  // 새 쌓임 맥락이 생겨서, 그 안에 두면 fixed + z-50 이어도 카드 뒤로 깔린다.
+  return createPortal(
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/85 p-4 backdrop-blur-sm">
       <div className="flex w-full max-w-[22rem] flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -369,6 +372,7 @@ function CropEditor({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

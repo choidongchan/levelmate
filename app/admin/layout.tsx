@@ -8,6 +8,7 @@ import { adminLogout, currentAdmin, useStore } from '@/lib/store'
 const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: '/admin', label: '대시보드', icon: 'chart' },
   { href: '/admin/users', label: '회원', icon: 'users' },
+  { href: '/admin/photos', label: '사진 검수', icon: 'image' },
   { href: '/admin/listings', label: '글', icon: 'list' },
   { href: '/admin/bookings', label: '예약', icon: 'calendar' },
   { href: '/admin/payments', label: '결제', icon: 'won' },
@@ -26,6 +27,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter()
   const state = useStore()
   const admin = currentAdmin(state)
+
+  // 검수를 기다리는 사진이 있으면 메뉴에서 바로 보이게 한다
+  const badges: Record<string, number> = {
+    '/admin/photos': state.users.filter((u) => u.photoStatus === 'PENDING').length,
+  }
 
   // 로그인 화면은 콘솔 껍데기 없이 그대로 보여준다
   if (pathname === '/admin/login') return <>{children}</>
@@ -69,6 +75,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <Icon name={item.icon} className="size-4 shrink-0" />
                 {item.label}
+                {badges[item.href] > 0 && (
+                  <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-black text-white">
+                    {badges[item.href]}
+                  </span>
+                )}
               </Link>
             )
           })}
@@ -123,6 +134,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   }`}
                 >
                   {item.label}
+                  {badges[item.href] > 0 && (
+                    <span className="ml-1 font-black text-brand-bright">
+                      {badges[item.href]}
+                    </span>
+                  )}
                 </Link>
               )
             })}

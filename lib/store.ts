@@ -247,7 +247,7 @@ export function uploadPhoto(userId: string, dataUrl: string): Promise<Result> {
 }
 
 export function removePhoto(userId: string): Promise<Result> {
-  return act('profile.update', { userId, patch: { photoUrl: null, photoStatus: 'NONE' } })
+  return act('photo.remove', { userId })
 }
 
 // ─────────────────────────── 운영 ───────────────────────────

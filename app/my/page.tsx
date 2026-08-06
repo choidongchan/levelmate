@@ -5,11 +5,12 @@ import { useMemo, useState } from 'react'
 import { PromiseDetail } from '@/components/badges'
 import { Icon } from '@/components/icon'
 import { LoginRequired } from '@/components/login-required'
+import { PhotoPicker } from '@/components/photo-picker'
 import { ScreenHeader } from '@/components/screen-header'
 import { UserArt } from '@/components/user-art'
 import { ratingAvg } from '@/lib/promise-score'
-import { currentUser, logout, updateProfile, useStore } from '@/lib/store'
-import { REGIONS } from '@/lib/types'
+import { currentUser, logout, removePhoto, updateProfile, uploadPhoto, useStore } from '@/lib/store'
+import { REGIONS, type User } from '@/lib/types'
 
 export default function MyPage() {
   const state = useStore()
@@ -79,6 +80,13 @@ export default function MyPage() {
 
           {editing && (
             <div className="mt-4 flex flex-col gap-2">
+              <PhotoPicker
+                value={me.photoUrl}
+                nickname={me.nickname}
+                onPick={(dataUrl) => uploadPhoto(me.id, dataUrl)}
+                onClear={() => removePhoto(me.id)}
+              />
+              <PhotoStatusNote status={me.photoStatus} hasPhoto={Boolean(me.photoUrl)} />
               <input
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
@@ -147,7 +155,6 @@ export default function MyPage() {
         </section>
 
         <section className="flex flex-col gap-2">
-
           <button
             type="button"
             onClick={logout}
@@ -159,5 +166,55 @@ export default function MyPage() {
         </section>
       </main>
     </>
+  )
+}
+
+/**
+ * 올린 사진이 지금 어떤 상태인지 알려준다.
+ * 검수를 통과해야 남에게 보이므로, 이 말이 없으면 "올렸는데 왜 안 보이지?" 가 된다.
+ */
+function PhotoStatusNote({
+  status,
+  hasPhoto,
+}: {
+  status: User['photoStatus']
+  hasPhoto: boolean
+}) {
+  if (!hasPhoto) {
+    return (
+      <p className="px-1 text-[11px] leading-relaxed text-dim">
+        사진을 올리지 않으면 캐릭터 그림이 대신 보입니다.
+      </p>
+    )
+  }
+
+  const note = {
+    PENDING: {
+      color: '#fbbf24',
+      icon: 'clock' as const,
+      text: '검수 중입니다. 통과하면 다른 사람에게도 보입니다. 지금은 나만 볼 수 있어요.',
+    },
+    APPROVED: {
+      color: '#34d399',
+      icon: 'check' as const,
+      text: '검수를 통과했습니다. 프로필과 목록에 이 사진이 나갑니다.',
+    },
+    REJECTED: {
+      color: '#f43f5e',
+      icon: 'alert' as const,
+      text: '이 사진은 반려되었습니다. 본인 얼굴이 나온 사진으로 다시 올려주세요.',
+    },
+    NONE: {
+      color: '#94a3b8',
+      icon: 'info' as const,
+      text: '사진이 아직 검수 대기에 올라가지 않았습니다.',
+    },
+  }[status]
+
+  return (
+    <p className="flex gap-2 px-1 text-[11px] leading-relaxed text-muted">
+      <Icon name={note.icon} className="mt-0.5 size-3.5 shrink-0" style={{ color: note.color }} />
+      <span>{note.text}</span>
+    </p>
   )
 }

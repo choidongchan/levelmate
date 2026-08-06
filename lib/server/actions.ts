@@ -115,6 +115,17 @@ export async function runAction(type: string, p: Payload, viewer: Viewer): Promi
       return
     }
 
+    case 'photo.remove': {
+      // 사진을 내리는 것은 본인도 할 수 있다. 올리는 것은 /api/photos 로 간다.
+      const userId = id(p.userId, '회원')
+      requireSelfOrAdmin(viewer, userId)
+      await db.user.update({
+        where: { id: userId },
+        data: { photoUrl: null, photoStatus: 'NONE' },
+      })
+      return
+    }
+
     // ── 글 ─────────────────────────────────────────────────
     case 'listing.create': {
       const me = requireLogin(viewer)

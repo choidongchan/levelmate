@@ -53,6 +53,9 @@ const PATHS = {
   trash: <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm2.1 2 .7 8h6.4l.7-8H8.1Z" />,
   ban: <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 2a8 8 0 0 0-6.2 13.1L17.1 5.8A8 8 0 0 0 12 4Zm0 16a8 8 0 0 0 6.2-13.1L6.9 18.2A8 8 0 0 0 12 20Z" />,
   refresh: <path d="M12 4a8 8 0 0 1 7.5 5.2l-1.9.7A6 6 0 0 0 6.5 9H10v2H3V4h2v2.6A8 8 0 0 1 12 4Zm7 9h2v7h-2v-2.6A8 8 0 0 1 4.5 14.8l1.9-.7A6 6 0 0 0 17.5 15H14v-2h5Z" />,
+  image: (
+    <path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm0 2v9.2l3.5-3.5 4 4 3-3L20 16V5H4Zm5 1a2 2 0 1 1 0 4 2 2 0 0 1 0-4ZM4 19v-2l3.5-3.5L13 19H4Zm11.6 0-2-2 1.4-1.4L20 19h-4.4Z" />
+  ),
 } as const
 
 export type IconName = keyof typeof PATHS

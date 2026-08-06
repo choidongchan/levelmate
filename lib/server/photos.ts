@@ -1,14 +1,20 @@
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import path from 'node:path'
+import { db } from '../db'
 import { ActionError } from './actions'
 
 /**
- * 사진은 DB 가 아니라 서버 디스크에 둔다.
- * 백업(pg_dump)을 무겁게 만들지 않고, 배포 때 코드만 갈아끼워도 남아 있어야 하므로
- * 저장소 바깥 경로를 쓴다. 서버에서는 UPLOAD_DIR 로 지정한다.
+ * 올라온 사진은 DB 에 담는다.
+ *
+ * 처음에는 서버 디스크에 뒀는데, 그러면 저장 경로·권한·배포 방식 중 하나만
+ * 어긋나도 파일이 조용히 사라진다. 게다가 올린 사람 브라우저에는 캐시가
+ * 1년치 남아 있어서 본인 화면만 멀쩡해 보이고 다른 사람 화면에서만 안 보인다.
+ * 알아채기 가장 어려운 종류의 고장이라 DB 로 옮겼다. 백업에도 같이 들어간다.
+ *
+ * 예전에 디스크에 담긴 사진이 남아 있으면, 읽을 때 DB 로 옮겨 담는다.
  */
-const DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), '.uploads')
+const LEGACY_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), '.uploads')
 
 const MAX_BYTES = 3 * 1024 * 1024
 
@@ -18,7 +24,8 @@ const TYPES: Record<string, { ext: string; mime: string; looksRight: (b: Buffer)
   webp: {
     ext: 'webp',
     mime: 'image/webp',
-    looksRight: (b) => b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP',
+    looksRight: (b) =>
+      b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP',
   },
   jpeg: {
     ext: 'jpg',
@@ -38,7 +45,9 @@ const MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',
 }
 
-/** data URL 을 받아 파일로 남기고, 화면이 쓸 주소를 돌려준다. */
+const NAME_RE = /^[a-f0-9]{32}\.(webp|jpg|png)$/
+
+/** data URL 을 받아 담고, 화면이 쓸 주소를 돌려준다. */
 export async function savePhoto(dataUrl: unknown): Promise<string> {
   if (typeof dataUrl !== 'string') throw new ActionError('사진이 없습니다')
   const match = /^data:image\/(webp|jpeg|png);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)
@@ -52,19 +61,73 @@ export async function savePhoto(dataUrl: unknown): Promise<string> {
   if (!kind.looksRight(buf)) throw new ActionError('사진 파일이 아닙니다')
 
   // 같은 사진은 같은 이름이 된다. 주소가 안 바뀌니 캐시를 오래 둘 수 있다.
-  const name = `${createHash('sha256').update(buf).digest('hex').slice(0, 32)}.${kind.ext}`
+  const id = `${createHash('sha256').update(buf).digest('hex').slice(0, 32)}.${kind.ext}`
 
-  await mkdir(DIR, { recursive: true })
-  await writeFile(path.join(DIR, name), buf)
-  return PHOTO_PREFIX + name
+  await db.photo.upsert({
+    where: { id },
+    update: {},
+    create: { id, mime: kind.mime, data: buf, bytes: buf.byteLength },
+  })
+
+  return PHOTO_PREFIX + id
 }
 
 export async function readPhoto(name: string) {
-  if (!/^[a-f0-9]{32}\.(webp|jpg|png)$/.test(name)) return null
-  try {
-    const body = await readFile(path.join(DIR, name))
-    return { body, mime: MIME_BY_EXT[name.split('.').pop() as string] }
-  } catch {
-    return null
+  if (!NAME_RE.test(name)) return null
+
+  const row = await db.photo.findUnique({ where: { id: name } })
+  if (row) return { body: Buffer.from(row.data), mime: row.mime }
+
+  // 예전에 디스크에 담긴 사진이면 이참에 DB 로 옮겨 담는다
+  const legacy = await readFile(path.join(LEGACY_DIR, name)).catch(() => null)
+  if (!legacy) return null
+
+  const mime = MIME_BY_EXT[name.split('.').pop() as string]
+  await db.photo
+    .create({ data: { id: name, mime, data: legacy, bytes: legacy.byteLength } })
+    .catch(() => {})
+  return { body: legacy, mime }
+}
+
+/**
+ * 사진이 지금 어떤 상태인지 그대로 알려준다.
+ * "올렸는데 다른 사람 화면에서 안 보인다" 같은 상황을 눈으로 확인하기 위한 것이다.
+ */
+export async function photoDiagnostics() {
+  const users = await db.user.findMany({
+    where: { photoUrl: { not: null } },
+    select: { nickname: true, photoUrl: true },
+  })
+  const stored = new Set((await db.photo.findMany({ select: { id: true } })).map((p) => p.id))
+
+  const broken: { nickname: string; reason: string }[] = []
+  let uploaded = 0
+  let staticPath = 0
+
+  for (const u of users) {
+    const url = u.photoUrl as string
+
+    if (url.startsWith(PHOTO_PREFIX)) {
+      uploaded += 1
+      const name = url.slice(PHOTO_PREFIX.length)
+      if (!stored.has(name)) {
+        const onDisk = await readFile(path.join(LEGACY_DIR, name))
+          .then(() => true)
+          .catch(() => false)
+        if (!onDisk) broken.push({ nickname: u.nickname, reason: '사진 파일이 사라졌습니다' })
+      }
+    } else if (url.startsWith('data:')) {
+      broken.push({
+        nickname: u.nickname,
+        reason: '옛 방식으로 담긴 사진입니다. 다시 올려주세요',
+      })
+    } else {
+      staticPath += 1
+      if (!url.startsWith('/')) {
+        broken.push({ nickname: u.nickname, reason: '주소 형식이 이상합니다' })
+      }
+    }
   }
+
+  return { total: users.length, uploaded, staticPath, stored: stored.size, broken }
 }
