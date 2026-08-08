@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { GameBadge } from './game-badge'
 import { Icon } from './icon'
+import { ChampionList, RoleTag, TierBadge, WinRateBar } from './riot-badges'
 import { UserArt } from './user-art'
 import { won } from '@/lib/format'
 import { ratingAvg } from '@/lib/promise-score'
@@ -24,6 +25,7 @@ export function MateRow({
   href?: string
 }) {
   const rating = ratingAvg(user)
+  const showRiot = listing.mainGame === 'lol' && Boolean(user.riot?.tier)
 
   return (
     <Link
@@ -47,10 +49,24 @@ export function MateRow({
             <span className="text-online">온라인</span>
           </span>
         </div>
-        <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
-          {GAMES[listing.mainGame].short} · {listing.tier}
-        </p>
+        {/* 롤이고 계정을 연결했으면 손으로 적은 티어 대신 실제 티어를 보여준다 */}
+        {showRiot ? (
+          <span className="mt-1 flex items-center gap-1.5">
+            <TierBadge riot={user.riot!} />
+            {user.riot!.mainRole && <RoleTag role={user.riot!.mainRole} />}
+            <WinRateBar riot={user.riot!} />
+          </span>
+        ) : (
+          <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
+            {GAMES[listing.mainGame].short} · {listing.tier}
+          </p>
+        )}
         <p className="mt-1 truncate text-xs text-dim md:text-[11px]">{listing.title}</p>
+        {showRiot && user.riot!.champions.length > 0 && (
+          <span className="mt-1 hidden md:block">
+            <ChampionList riot={user.riot!} />
+          </span>
+        )}
       </div>
 
       <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:gap-1 md:px-3 md:pt-1.5 md:pb-3">

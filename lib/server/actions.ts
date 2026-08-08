@@ -55,6 +55,13 @@ const BOOKING_STATES = [
 ] as const
 const PHOTO_STATES = ['NONE', 'PENDING', 'APPROVED', 'REJECTED'] as const
 const PLAN_TARGETS = ['MEMBER', 'MATE', 'PCBANG'] as const
+const ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
+
+/** 포지션 목록. 빈 값이면 '상관없음' 으로 본다. */
+function roles(v: unknown): string[] {
+  if (!Array.isArray(v)) return []
+  return [...new Set(v.map((r) => pick(r, ROLES, '포지션')))]
+}
 
 /** 시간표는 "13:00" 같은 형태만 받는다 */
 function clock(v: unknown, what: string): string {
@@ -149,6 +156,8 @@ export async function runAction(type: string, p: Payload, viewer: Viewer): Promi
           mainGame: pick(l.mainGame, GAME_KEYS, '게임'),
           games: games.length ? games : [pick(l.mainGame, GAME_KEYS, '게임')],
           tier: text(l.tier, 20, '티어'),
+          myRole: l.myRole ? pick(l.myRole, ROLES, '내 포지션') : null,
+          wantRoles: roles(l.wantRoles),
           pricePerHour: num(l.pricePerHour, 0, 1_000_000, '금액'),
           region: meetMode === 'ONLINE' ? '온라인' : text(l.region, 40, '지역', 1),
           pcbang: meetMode === 'ONLINE' ? null : text(l.pcbang ?? '', 60, 'PC방') || null,
@@ -178,6 +187,9 @@ export async function runAction(type: string, p: Payload, viewer: Viewer): Promi
       if ('games' in patch && Array.isArray(patch.games))
         data.games = [...new Set(patch.games.map((g) => pick(g, GAME_KEYS, '게임')))]
       if ('tier' in patch) data.tier = text(patch.tier, 20, '티어')
+      if ('myRole' in patch)
+        data.myRole = patch.myRole ? pick(patch.myRole, ROLES, '내 포지션') : null
+      if ('wantRoles' in patch) data.wantRoles = roles(patch.wantRoles)
       if ('pricePerHour' in patch)
         data.pricePerHour = num(patch.pricePerHour, 0, 1_000_000, '금액')
       if ('region' in patch) data.region = text(patch.region, 40, '지역', 1)

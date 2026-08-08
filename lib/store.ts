@@ -274,6 +274,26 @@ export function removePhoto(userId: string): Promise<Result> {
   return act('photo.remove', { userId })
 }
 
+// ─────────────────────────── 라이엇 계정 ───────────────────────────
+
+/** "이름#태그" 로 계정을 연결하고 전적을 가져온다 */
+export function linkRiot(gameName: string, tagLine: string): Promise<Result> {
+  return post('/api/riot', { op: 'link', gameName, tagLine })
+}
+
+export function syncRiot(): Promise<Result> {
+  return post('/api/riot', { op: 'sync' })
+}
+
+/** 게임 클라이언트에 넣은 코드로 본인 계정임을 확인한다 */
+export function verifyRiot(): Promise<Result> {
+  return post('/api/riot', { op: 'verify' })
+}
+
+export function unlinkRiot(): Promise<Result> {
+  return post('/api/riot', { op: 'unlink' })
+}
+
 // ─────────────────────────── 운영 ───────────────────────────
 
 export function verifyUser(userId: string, verified: boolean): Promise<Result> {

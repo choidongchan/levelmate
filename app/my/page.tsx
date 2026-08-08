@@ -6,6 +6,7 @@ import { PromiseDetail } from '@/components/badges'
 import { Icon } from '@/components/icon'
 import { LoginRequired } from '@/components/login-required'
 import { PhotoPicker } from '@/components/photo-picker'
+import { RiotLink } from '@/components/riot-link'
 import { ScreenHeader } from '@/components/screen-header'
 import { UserArt } from '@/components/user-art'
 import { ratingAvg } from '@/lib/promise-score'
@@ -126,6 +127,8 @@ export default function MyPage() {
             </div>
           )}
         </section>
+
+        <RiotLink me={me} />
 
         <PromiseDetail user={me} />
 

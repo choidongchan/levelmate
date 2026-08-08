@@ -26,7 +26,7 @@ export async function buildSnapshot(viewer?: Viewer): Promise<State> {
   const { userId, adminId, isAdmin } = who
 
   const [userRows, listingRows, bookingRows, reviewRows, planRows] = await Promise.all([
-    db.user.findMany({ orderBy: { createdAt: 'asc' } }),
+    db.user.findMany({ orderBy: { createdAt: 'asc' }, include: { riot: true } }),
     db.listing.findMany({
       where: isAdmin ? {} : { OR: [{ active: true }, ...(userId ? [{ userId }] : [])] },
       orderBy: { createdAt: 'desc' },
@@ -63,7 +63,7 @@ export async function buildSnapshot(viewer?: Viewer): Promise<State> {
   ])
 
   return {
-    users: userRows.map((u) => toUser(u, isAdmin || u.id === userId)),
+    users: userRows.map((u) => toUser(u, isAdmin || u.id === userId, u.id === userId)),
     listings: listingRows.map(toListing),
     bookings: bookingRows.map(toBooking),
     messages: messageRows.map(toMessage),

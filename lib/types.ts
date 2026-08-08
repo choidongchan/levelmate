@@ -1,3 +1,7 @@
+import type { LolRole, RiotProfile } from './riot'
+
+export type { LolRole, RiotProfile }
+
 export type GameKey = 'lol' | 'valorant' | 'pubg' | 'fconline' | 'overwatch' | 'maple' | 'etc'
 
 export const GAMES: Record<GameKey, { name: string; short: string; color: string }> = {
@@ -53,6 +57,8 @@ export type Role = 'MEMBER' | 'ADMIN'
 export type User = {
   id: string
   nickname: string
+  /** 라이엇 계정을 연결했다면 실제 전적. 안 했으면 null. */
+  riot?: RiotProfile | null
   hue: number
   phone: string
   verified: boolean
@@ -84,6 +90,10 @@ export type Listing = {
   mainGame: GameKey
   games: GameKey[]
   tier: string
+  /** 내가 주로 서는 자리 (LOL) */
+  myRole: LolRole | null
+  /** 이 글에서 찾는 자리 */
+  wantRoles: LolRole[]
   /** 0이면 무료 */
   pricePerHour: number
   region: string

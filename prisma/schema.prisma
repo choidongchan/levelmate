@@ -89,6 +89,7 @@ model User {
   ratingSum   Int @default(0)
   reviewCount Int @default(0)
 
+  riot            RiotAccount?
   listings        Listing[]
   bookingsAsMember Booking[] @relation("MemberBookings")
   bookingsAsHost   Booking[] @relation("HostBookings")
@@ -100,6 +101,52 @@ model User {
 
   @@index([role])
   @@index([region])
+}
+
+/// 연결된 라이엇 계정과, 거기서 가져온 실제 전적.
+///
+/// 손으로 적은 티어는 아무도 믿지 않는다. 실제 게임 기록으로 대신한다.
+/// 라이엇에 매번 물어보면 호출 한도에 걸리므로 여기에 담아두고 주기적으로 갱신한다.
+model RiotAccount {
+  id     String @id
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  puuid    String @unique
+  gameName String
+  tagLine  String
+  /// kr, jp1, na1 … 라이엇의 지역 코드
+  platform String @default("kr")
+
+  summonerId    String?
+  profileIconId Int?
+  summonerLevel Int?
+
+  // 솔로랭크
+  tier     String? // IRON ~ CHALLENGER
+  division String? // I ~ IV (마스터 위로는 없다)
+  lp       Int     @default(0)
+  wins     Int     @default(0)
+  losses   Int     @default(0)
+
+  // 최근 경기에서 뽑아낸 것
+  mainRole    String? // TOP JUNGLE MID ADC SUPPORT
+  /// [{ id, name, games, wins }] — 많이 한 챔피언 순
+  champions   Json?
+  kills       Float   @default(0)
+  deaths      Float   @default(0)
+  assists     Float   @default(0)
+  recentGames Int     @default(0)
+
+  /// 게임 클라이언트에 코드를 넣어 본인 계정임을 확인한 시각
+  verifiedAt   DateTime?
+  /// 본인 확인용으로 발급한 코드
+  verifyCode   String?
+  /// 마지막으로 라이엇에 물어본 시각. 너무 자주 묻지 않으려고 본다.
+  syncedAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([tier])
 }
 
 /// 이용자 로그인 세션. 쿠키에는 이 토큰만 담긴다.
@@ -129,7 +176,12 @@ model Listing {
   mainGame String
   games    String[]
 
+  /// 손으로 적는 실력 표시. 라이엇 계정을 연결하면 실제 티어가 대신 나간다.
   tier         String
+  /// 내가 주로 서는 자리 (LOL 전용)
+  myRole       String?
+  /// 이 글에서 찾는 자리 (여러 개 가능)
+  wantRoles    String[]
   /// 0이면 무료
   pricePerHour Int    @default(0)
 

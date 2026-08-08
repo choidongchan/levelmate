@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { Icon } from '@/components/icon'
 import { MateRow } from '@/components/mate-row'
 import { ScreenHeader } from '@/components/screen-header'
+import { LOL_ROLE_KEYS, LOL_ROLES, type LolRole } from '@/lib/riot'
 import { useStore } from '@/lib/store'
 import {
   GAMES,
@@ -21,6 +22,7 @@ export default function SearchPage() {
   const [game, setGame] = useState<GameKey | 'ALL'>('ALL')
   const [mode, setMode] = useState<MeetMode | 'ALL'>('ALL')
   const [region, setRegion] = useState('전체 지역')
+  const [role, setRole] = useState<LolRole | 'ALL'>('ALL')
   const [freeOnly, setFreeOnly] = useState(false)
 
   const results = useMemo(() => {
@@ -35,6 +37,7 @@ export default function SearchPage() {
         return l.meetMode === 'OFFLINE' || l.meetMode === 'BOTH'
       })
       .filter((l) => (region === '전체 지역' ? true : l.region === region))
+      .filter((l) => (role === 'ALL' ? true : l.myRole === role))
       .filter((l) => (freeOnly ? l.pricePerHour === 0 : true))
       .filter((l) => {
         if (!q) return true
@@ -48,7 +51,7 @@ export default function SearchPage() {
         )
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-  }, [state.listings, state.users, query, kind, game, mode, region, freeOnly])
+  }, [state.listings, state.users, query, kind, game, mode, region, role, freeOnly])
 
   return (
     <>
@@ -96,6 +99,20 @@ export default function SearchPage() {
             </Chip>
           ))}
         </div>
+
+        {/* 롤은 자리가 맞아야 의미가 있다. 상대가 주로 서는 자리로 거른다. */}
+        {(game === 'ALL' || game === 'lol') && (
+          <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
+            <Chip active={role === 'ALL'} onClick={() => setRole('ALL')}>
+              전체 포지션
+            </Chip>
+            {LOL_ROLE_KEYS.map((r) => (
+              <Chip key={r} active={role === r} onClick={() => setRole(role === r ? 'ALL' : r)}>
+                {LOL_ROLES[r].label}
+              </Chip>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-2">
           <select

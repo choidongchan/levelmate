@@ -141,6 +141,13 @@ export default function HomePage() {
         <Safety />
         <PartnerCard />
         <InstallHint />
+
+        {/* 라이엇 API 를 쓰는 서비스는 이 고지를 넣어야 한다 */}
+        <p className="px-1 pb-2 text-[10px] leading-relaxed text-dim">
+          한판은 Riot Games의 승인을 받지 않았으며, Riot Games 또는 League of Legends 제작·관리에
+          공식적으로 관여한 누구의 견해도 대변하지 않습니다. League of Legends와 Riot Games는 Riot
+          Games, Inc.의 상표 또는 등록상표입니다.
+        </p>
       </main>
     </>
   )

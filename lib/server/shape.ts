@@ -1,3 +1,4 @@
+import type { LolRole, RiotProfile } from '../riot'
 import type {
   AdminAccount,
   Booking,
@@ -43,12 +44,59 @@ type UserRow = {
   noShow: number
   ratingSum: number
   reviewCount: number
+  riot?: RiotRow | null
 }
 
-export function toUser(row: UserRow, showPhone: boolean): User {
+type RiotRow = {
+  gameName: string
+  tagLine: string
+  tier: string | null
+  division: string | null
+  lp: number
+  wins: number
+  losses: number
+  mainRole: string | null
+  champions: unknown
+  kills: number
+  deaths: number
+  assists: number
+  recentGames: number
+  verifiedAt: Date | null
+  syncedAt: Date | null
+  verifyCode: string | null
+}
+
+/** 연결된 라이엇 계정. 화면에 나가는 것은 전적뿐이고 puuid 같은 것은 내보내지 않는다. */
+function toRiot(row: RiotRow | null | undefined, isSelf: boolean): RiotProfile | null {
+  if (!row) return null
+  return {
+    gameName: row.gameName,
+    tagLine: row.tagLine,
+    tier: row.tier,
+    division: row.division,
+    lp: row.lp,
+    wins: row.wins,
+    losses: row.losses,
+    mainRole: (row.mainRole as LolRole | null) ?? null,
+    champions: Array.isArray(row.champions)
+      ? (row.champions as RiotProfile['champions'])
+      : [],
+    kills: row.kills,
+    deaths: row.deaths,
+    assists: row.assists,
+    recentGames: row.recentGames,
+    verified: Boolean(row.verifiedAt),
+    syncedAt: isoOrNull(row.syncedAt),
+    // 확인 코드는 본인만 본다. 남이 알면 그 코드로 남의 계정을 인증해버릴 수 있다.
+    verifyCode: isSelf ? row.verifyCode : null,
+  }
+}
+
+export function toUser(row: UserRow, showPhone: boolean, isSelf = false): User {
   return {
     id: row.id,
     nickname: row.nickname,
+    riot: toRiot(row.riot, isSelf),
     hue: row.hue,
     phone: showPhone ? row.phone : maskPhone(row.phone),
     verified: row.verified,
@@ -78,6 +126,8 @@ type ListingRow = {
   mainGame: string
   games: string[]
   tier: string
+  myRole: string | null
+  wantRoles: string[]
   pricePerHour: number
   region: string
   pcbang: string | null
@@ -98,6 +148,8 @@ export function toListing(row: ListingRow): Listing {
     mainGame: row.mainGame as GameKey,
     games: row.games as GameKey[],
     tier: row.tier,
+    myRole: (row.myRole as LolRole | null) ?? null,
+    wantRoles: (row.wantRoles ?? []) as LolRole[],
     pricePerHour: row.pricePerHour,
     region: row.region,
     pcbang: row.pcbang,

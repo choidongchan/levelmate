@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Icon } from '@/components/icon'
 import { ScreenHeader } from '@/components/screen-header'
 import { PC_BANGS } from '@/lib/pcbangs'
+import { LOL_ROLE_KEYS, LOL_ROLES, type LolRole } from '@/lib/riot'
 import { createListing, currentUser, useStore } from '@/lib/store'
 import {
   GAMES,
@@ -27,6 +28,8 @@ export default function NewListingPage() {
   const [body, setBody] = useState('')
   const [mainGame, setMainGame] = useState<GameKey>('lol')
   const [tier, setTier] = useState('')
+  const [myRole, setMyRole] = useState<LolRole | null>(null)
+  const [wantRoles, setWantRoles] = useState<LolRole[]>([])
   const [free, setFree] = useState(true)
   const [price, setPrice] = useState(15000)
   const [region, setRegion] = useState(REGIONS[0])
@@ -157,7 +160,59 @@ export default function NewListingPage() {
             placeholder="티어 / 실력 (예: 골드 3, 복귀 유저)"
             className="glass mt-2 w-full rounded-2xl px-4 py-3.5 text-sm outline-none placeholder:text-dim"
           />
+          {me.riot?.tier && mainGame === 'lol' && (
+            <p className="mt-1.5 px-1 text-[11px] text-online">
+              라이엇 계정을 연결해두셨습니다. 목록에는 직접 적은 티어 대신 실제 티어가 나갑니다.
+            </p>
+          )}
         </Section>
+
+        {/* 롤은 자리가 중요하다. 어디를 서고 누구를 찾는지부터 맞아야 한다. */}
+        {mainGame === 'lol' && (
+          <Section label="포지션">
+            <p className="mb-2 px-1 text-[11px] text-dim">내가 주로 서는 자리</p>
+            <div className="flex flex-wrap gap-2">
+              {LOL_ROLE_KEYS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setMyRole(myRole === r ? null : r)}
+                  className={`rounded-full border px-3.5 py-1.5 text-xs transition ${
+                    myRole === r
+                      ? 'border-transparent bg-white font-bold text-ink'
+                      : 'border-white/8 bg-white/4 text-muted'
+                  }`}
+                >
+                  {LOL_ROLES[r].label}
+                </button>
+              ))}
+            </div>
+
+            <p className="mt-3 mb-2 px-1 text-[11px] text-dim">
+              찾는 자리 (여러 개 고를 수 있어요 · 안 고르면 상관없음)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {LOL_ROLE_KEYS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() =>
+                    setWantRoles((prev) =>
+                      prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r],
+                    )
+                  }
+                  className={`rounded-full border px-3.5 py-1.5 text-xs transition ${
+                    wantRoles.includes(r)
+                      ? 'border-transparent bg-brand font-bold text-white'
+                      : 'border-white/8 bg-white/4 text-muted'
+                  }`}
+                >
+                  {LOL_ROLES[r].label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
 
         <Section label="참가비">
           <div className="flex gap-2">
@@ -259,6 +314,8 @@ export default function NewListingPage() {
               mainGame,
               games: [mainGame],
               tier: tier.trim() || '미기재',
+              myRole: mainGame === 'lol' ? myRole : null,
+              wantRoles: mainGame === 'lol' ? wantRoles : [],
               pricePerHour: free ? 0 : price,
               region: isOnline ? '온라인' : region,
               pcbang: isOnline ? null : pcbang,
