@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { PromiseDetail } from '@/components/badges'
+import { GameLink } from '@/components/game-link'
 import { Icon } from '@/components/icon'
 import { LoginRequired } from '@/components/login-required'
 import { PhotoPicker } from '@/components/photo-picker'
@@ -129,6 +130,7 @@ export default function MyPage() {
         </section>
 
         <RiotLink me={me} />
+        <GameLink me={me} game="pubg" />
 
         <PromiseDetail user={me} />
 

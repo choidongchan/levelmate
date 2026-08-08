@@ -6,6 +6,7 @@ import type {
   AdminAccount,
   Booking,
   BookingStatus,
+  GameKey,
   Listing,
   Plan,
   User,
@@ -292,6 +293,21 @@ export function verifyRiot(): Promise<Result> {
 
 export function unlinkRiot(): Promise<Result> {
   return post('/api/riot', { op: 'unlink' })
+}
+
+// ─────────────────────────── 다른 게임 계정 ───────────────────────────
+
+/** 배그처럼 라이엇이 아닌 게임. 게임이 늘어도 부르는 쪽은 그대로다. */
+export function linkGame(game: GameKey, name: string, platform?: string): Promise<Result> {
+  return post('/api/game', { op: 'link', game, name, platform })
+}
+
+export function syncGame(game: GameKey): Promise<Result> {
+  return post('/api/game', { op: 'sync', game })
+}
+
+export function unlinkGame(game: GameKey): Promise<Result> {
+  return post('/api/game', { op: 'unlink', game })
 }
 
 // ─────────────────────────── 운영 ───────────────────────────

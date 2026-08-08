@@ -4,6 +4,19 @@ export type { LolRole, RiotProfile }
 
 export type GameKey = 'lol' | 'valorant' | 'pubg' | 'fconline' | 'overwatch' | 'maple' | 'etc'
 
+/** 라이엇 말고 다른 게임에서 가져온 전적. 게임마다 담기는 값이 다르다. */
+export type GameProfile = {
+  game: GameKey
+  platform: string | null
+  name: string
+  /** "다이아몬드 3" 처럼 바로 보여줄 수 있는 등급 */
+  tier: string | null
+  /** "스쿼드 · 4123 RP · 128판" 같은 한 줄 요약 */
+  detail: string | null
+  stats: Record<string, number | string> | null
+  syncedAt: string | null
+}
+
 export const GAMES: Record<GameKey, { name: string; short: string; color: string }> = {
   lol: { name: '리그 오브 레전드', short: 'LOL', color: '#c89b3c' },
   valorant: { name: '발로란트', short: 'VAL', color: '#ff4655' },
@@ -59,6 +72,8 @@ export type User = {
   nickname: string
   /** 라이엇 계정을 연결했다면 실제 전적. 안 했으면 null. */
   riot?: RiotProfile | null
+  /** 라이엇 말고 다른 게임의 연결된 계정 (배그 등) */
+  gameAccounts?: GameProfile[]
   hue: number
   phone: string
   verified: boolean

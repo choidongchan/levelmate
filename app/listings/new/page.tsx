@@ -195,6 +195,11 @@ export default function NewListingPage() {
               라이엇 계정을 연결해두셨습니다. 목록에는 직접 고른 티어 대신 실제 티어가 나갑니다.
             </p>
           )}
+          {me.gameAccounts?.some((g) => g.game === mainGame && g.tier) && (
+            <p className="mt-1.5 px-1 text-[11px] text-online">
+              계정을 연결해두셨습니다. 목록에는 직접 고른 티어 대신 실제 티어가 나갑니다.
+            </p>
+          )}
         </Section>
 
         {/* 자리 개념이 있는 게임만. 어디를 서고 누구를 찾는지부터 맞아야 한다. */}

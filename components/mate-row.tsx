@@ -33,6 +33,10 @@ export function MateRow({
   const rating = ratingAvg(user)
   // 언랭이어도 연결했으면 보여준다. 주 포지션과 자주 하는 챔피언만으로도 고를 거리가 된다.
   const showRiot = Boolean(user.riot) && (!listing || listing.mainGame === 'lol')
+  // 롤이 아닌 게임도 연결했으면 손으로 적은 티어 대신 실제 티어를 쓴다.
+  const linked = showRiot
+    ? null
+    : (user.gameAccounts?.find((g) => (listing ? g.game === listing.mainGame : true)) ?? null)
 
   return (
     <Link
@@ -64,6 +68,17 @@ export function MateRow({
             {user.riot!.mainRole && <RoleTag role={user.riot!.mainRole} />}
             <WinRateBar riot={user.riot!} />
           </span>
+        ) : linked ? (
+          <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted md:text-[11px]">
+            <span
+              className="shrink-0 rounded px-1 py-0.5 text-[10px] font-black"
+              style={{ background: `${GAMES[linked.game].color}22`, color: GAMES[linked.game].color }}
+            >
+              {GAMES[linked.game].short}
+            </span>
+            <span className="truncate font-semibold">{linked.tier ?? '언랭'}</span>
+            <Icon name="check" className="size-3 shrink-0 text-online" />
+          </p>
         ) : (
           <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
             {listing ? (

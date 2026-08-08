@@ -28,7 +28,7 @@ export async function buildSnapshot(viewer?: Viewer): Promise<State> {
   const { userId, adminId, isAdmin } = who
 
   const [userRows, listingRows, bookingRows, reviewRows, planRows] = await Promise.all([
-    db.user.findMany({ orderBy: { createdAt: 'asc' }, include: { riot: true } }),
+    db.user.findMany({ orderBy: { createdAt: 'asc' }, include: { riot: true, gameAccounts: true } }),
     db.listing.findMany({
       where: isAdmin ? {} : { OR: [{ active: true }, ...(userId ? [{ userId }] : [])] },
       orderBy: { createdAt: 'desc' },

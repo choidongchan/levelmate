@@ -90,6 +90,7 @@ model User {
   reviewCount Int @default(0)
 
   riot            RiotAccount?
+  gameAccounts    GameAccount[]
   listings        Listing[]
   bookingsAsMember Booking[] @relation("MemberBookings")
   bookingsAsHost   Booking[] @relation("HostBookings")
@@ -317,6 +318,39 @@ model Photo {
   data      Bytes
   bytes     Int
   createdAt DateTime @default(now())
+}
+
+/// 라이엇 말고 다른 게임의 연결된 계정.
+///
+/// 게임마다 주는 값이 제각각이라 숫자 지표는 stats 에 그대로 담고, 화면에
+/// 보일 것만 tier·detail 로 뽑아둔다. 게임이 늘어도 표를 새로 만들지 않는다.
+model GameAccount {
+  id     String @id
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// pubg, fconline, maple …
+  game String
+  /// 게임 안에서 계정이 갈리는 기준 (배그의 steam / kakao 같은 것)
+  platform String?
+  /// 화면에 보일 이름
+  name String
+  /// 그 게임 쪽 식별자
+  externalId String
+
+  /// "다이아몬드 3" 처럼 바로 보여줄 수 있는 등급
+  tier String?
+  /// "4123 RP · 승률 12%" 같은 한 줄 요약
+  detail String?
+  /// 게임마다 뜻이 다른 숫자들
+  stats Json?
+
+  syncedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, game])
+  @@unique([game, externalId])
+  @@index([game, tier])
 }
 
 /// 운영자가 관리자 화면에서 넣는 설정값.

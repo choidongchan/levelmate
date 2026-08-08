@@ -1,6 +1,7 @@
 import type { LolRole, RiotProfile } from '../riot'
 import type {
   AdminAccount,
+  GameProfile,
   Booking,
   GameKey,
   Listing,
@@ -45,6 +46,29 @@ type UserRow = {
   ratingSum: number
   reviewCount: number
   riot?: RiotRow | null
+  gameAccounts?: GameRow[]
+}
+
+type GameRow = {
+  game: string
+  platform: string | null
+  name: string
+  tier: string | null
+  detail: string | null
+  stats: unknown
+  syncedAt: Date | null
+}
+
+function toGameAccount(row: GameRow): GameProfile {
+  return {
+    game: row.game as GameKey,
+    platform: row.platform,
+    name: row.name,
+    tier: row.tier,
+    detail: row.detail,
+    stats: (row.stats ?? null) as GameProfile['stats'],
+    syncedAt: isoOrNull(row.syncedAt),
+  }
 }
 
 type RiotRow = {
@@ -97,6 +121,7 @@ export function toUser(row: UserRow, showPhone: boolean, isSelf = false): User {
     id: row.id,
     nickname: row.nickname,
     riot: toRiot(row.riot, isSelf),
+    gameAccounts: (row.gameAccounts ?? []).map(toGameAccount),
     hue: row.hue,
     phone: showPhone ? row.phone : maskPhone(row.phone),
     verified: row.verified,
