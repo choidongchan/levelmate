@@ -8,6 +8,7 @@ import { InstallHint } from '@/components/install-hint'
 import { Logo } from '@/components/logo'
 import { MateRow } from '@/components/mate-row'
 import { UserArt } from '@/components/user-art'
+import { trustScore } from '@/lib/game-profile'
 import { currentUser, logout, useStore } from '@/lib/store'
 import {
   HOW_TO_STEPS,
@@ -18,6 +19,7 @@ import {
   SAFETY_ITEMS,
   type Listing,
   type ListingKind,
+  type User,
 } from '@/lib/types'
 
 export default function HomePage() {
@@ -49,9 +51,14 @@ export default function HomePage() {
         return user ? [{ user, listing: l as Listing | null }] : []
       })
 
+    // 게임 계정을 연결해 등급이 확인된 사람을 앞에 세운다. 고르는 쪽에서
+    // 제일 알고 싶은 것이 "이 사람 진짜 이 실력 맞나" 이기 때문이다.
+    const byTrust = (a: { user: User }, b: { user: User }) =>
+      trustScore(b.user) - trustScore(a.user)
+
     // 유형(알려드려요·알려주세요·같이해요)은 글에만 있는 것이라, 유형을 고른
     // 상태에서는 글 없는 사람을 끼워 넣지 않는다.
-    if (kind !== 'ALL') return withListing
+    if (kind !== 'ALL') return withListing.sort(byTrust)
 
     const withoutListing = state.users
       .filter((u) => !seen.has(u.id) && !u.bannedAt)
@@ -59,7 +66,7 @@ export default function HomePage() {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .map((user) => ({ user, listing: null as Listing | null }))
 
-    return [...withListing, ...withoutListing]
+    return [...withListing.sort(byTrust), ...withoutListing.sort(byTrust)]
   }, [state.listings, state.users, kind, region])
 
   return (

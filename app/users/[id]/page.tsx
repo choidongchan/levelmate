@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { PromiseBadge, PromiseDetail } from '@/components/badges'
 import { GameBadge } from '@/components/game-badge'
+import { GameChips, GameProfileList } from '@/components/game-profile'
 import { Icon } from '@/components/icon'
 import { ScreenHeader } from '@/components/screen-header'
 import { UserArt } from '@/components/user-art'
 import { won } from '@/lib/format'
+import { gameProfiles } from '@/lib/game-profile'
 import { ratingAvg } from '@/lib/promise-score'
 import { currentUser, useStore } from '@/lib/store'
 import { GAMES, LISTING_KINDS, MEET_MODES } from '@/lib/types'
@@ -37,6 +39,7 @@ export default function MateDetailPage() {
   }
 
   const rating = ratingAvg(user)
+  const games = gameProfiles(user)
   const isMe = me?.id === user.id
 
   return (
@@ -68,10 +71,17 @@ export default function MateDetailPage() {
               )}
             </span>
           </div>
-          {main && (
-            <p className="mt-1 text-sm text-muted">
-              {GAMES[main.mainGame].short} · {main.tier}
-            </p>
+          {/* 게임사에서 가져온 값이 있으면 그것이 먼저다. 손으로 적은 티어는 그 다음. */}
+          {games.length > 0 ? (
+            <span className="mt-1.5 flex">
+              <GameChips games={games} />
+            </span>
+          ) : (
+            main && (
+              <p className="mt-1 text-sm text-muted">
+                {GAMES[main.mainGame].short} · {main.tier}
+              </p>
+            )
           )}
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {user.verified && (
@@ -84,6 +94,8 @@ export default function MateDetailPage() {
           </div>
           {user.intro && <p className="mt-3 text-sm text-dim">{user.intro}</p>}
         </section>
+
+        <GameProfileList user={user} />
 
         {main && (
           <dl className="flex flex-col gap-4 rounded-3xl border border-line bg-surface p-5">

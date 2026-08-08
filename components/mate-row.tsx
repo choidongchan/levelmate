@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { GameBadge } from './game-badge'
+import { GameChips, WinBar } from './game-profile'
 import { Icon } from './icon'
-import { ChampionList, RoleTag, TierBadge, WinRateBar } from './riot-badges'
 import { UserArt } from './user-art'
 import { won } from '@/lib/format'
+import { gameProfiles } from '@/lib/game-profile'
 import { roleShort } from '@/lib/games'
 import { ratingAvg } from '@/lib/promise-score'
 import { GAMES, type Listing, type User } from '@/lib/types'
@@ -31,12 +32,10 @@ export function MateRow({
   href?: string
 }) {
   const rating = ratingAvg(user)
-  // 언랭이어도 연결했으면 보여준다. 주 포지션과 자주 하는 챔피언만으로도 고를 거리가 된다.
-  const showRiot = Boolean(user.riot) && (!listing || listing.mainGame === 'lol')
-  // 롤이 아닌 게임도 연결했으면 손으로 적은 티어 대신 실제 티어를 쓴다.
-  const linked = showRiot
-    ? null
-    : (user.gameAccounts?.find((g) => (listing ? g.game === listing.mainGame : true)) ?? null)
+  const games = gameProfiles(user)
+  // 글이 있으면 그 글의 게임을 앞세운다. 이 카드를 누른 이유가 그 게임이기 때문이다.
+  const lead = listing ? (games.find((g) => g.game === listing.mainGame) ?? null) : (games[0] ?? null)
+  const rest = games.filter((g) => g !== lead)
 
   return (
     <Link
@@ -55,30 +54,41 @@ export function MateRow({
       <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-none md:px-3 md:pt-2.5">
         <div className="flex items-center gap-1.5">
           <span className="truncate font-semibold md:text-sm">{user.nickname}</span>
-          <span className="flex shrink-0 items-center gap-1 text-[11px] md:text-[10px]">
+          {user.verified && <Icon name="shield" className="size-3 shrink-0 text-online" />}
+          <span className="ml-auto flex shrink-0 items-center gap-1 text-[11px] md:text-[10px]">
             <span className="online-dot size-1.5 rounded-full bg-online" />
             <span className="text-online">온라인</span>
           </span>
         </div>
 
-        {/* 롤이고 계정을 연결했으면 손으로 적은 티어 대신 실제 티어를 보여준다 */}
-        {showRiot ? (
-          <span className="mt-1 flex items-center gap-1.5">
-            <TierBadge riot={user.riot!} />
-            {user.riot!.mainRole && <RoleTag role={user.riot!.mainRole} />}
-            <WinRateBar riot={user.riot!} />
-          </span>
-        ) : linked ? (
-          <p className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted md:text-[11px]">
-            <span
-              className="shrink-0 rounded px-1 py-0.5 text-[10px] font-black"
-              style={{ background: `${GAMES[linked.game].color}22`, color: GAMES[linked.game].color }}
+        {/* 게임사에서 가져온 등급이 있으면 그것을, 없으면 직접 적은 값을 보여준다 */}
+        {lead ? (
+          <>
+            <p
+              className="mt-1 truncate text-sm leading-tight font-black md:text-[13px]"
+              style={{ color: lead.tierColor }}
             >
-              {GAMES[linked.game].short}
-            </span>
-            <span className="truncate font-semibold">{linked.tier ?? '언랭'}</span>
-            <Icon name="check" className="size-3 shrink-0 text-online" />
-          </p>
+              <span
+                className="mr-1 rounded-[3px] px-1 py-0.5 align-middle text-[10px] font-black"
+                style={{ background: `${lead.gameColor}2b`, color: lead.gameColor }}
+              >
+                {lead.gameShort}
+              </span>
+              {lead.tier ?? '언랭'}
+              {lead.verified && (
+                <Icon name="check" className="ml-1 inline size-3 align-middle text-online" />
+              )}
+            </p>
+            {lead.record ? (
+              <span className="mt-1 flex">
+                <WinBar record={lead.record} />
+              </span>
+            ) : (
+              lead.detail && (
+                <p className="mt-0.5 truncate text-[11px] text-dim">{lead.detail}</p>
+              )
+            )}
+          </>
         ) : (
           <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
             {listing ? (
@@ -96,15 +106,16 @@ export function MateRow({
           </p>
         )}
 
+        {/* 다른 게임도 연결해뒀다면 전부 곁들인다. 모바일에서도 보인다. */}
+        {rest.length > 0 && (
+          <span className="mt-1 flex">
+            <GameChips games={rest} max={3} />
+          </span>
+        )}
+
         <p className="mt-1 truncate text-xs text-dim md:text-[11px]">
           {listing ? listing.title : user.intro || '아직 올린 글이 없어요'}
         </p>
-
-        {showRiot && user.riot!.champions.length > 0 && (
-          <span className="mt-1 hidden md:block">
-            <ChampionList riot={user.riot!} />
-          </span>
-        )}
       </div>
 
       <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:gap-1 md:px-3 md:pt-1.5 md:pb-3">
