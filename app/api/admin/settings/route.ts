@@ -17,7 +17,23 @@ import {
   pubgKeyStatus,
   PubgError,
 } from '@/lib/server/pubg'
-import { maskSecret, PUBG_KEY, RIOT_KEY, setSetting } from '@/lib/server/settings'
+import {
+  checkNexonKey,
+  fconlineStats,
+  lookupFconline,
+  lookupMaple,
+  mapleStats,
+  nexonKeyStatus,
+  NexonError,
+} from '@/lib/server/nexon'
+import {
+  maskSecret,
+  NEXON_FC_KEY,
+  NEXON_MAPLE_KEY,
+  PUBG_KEY,
+  RIOT_KEY,
+  setSetting,
+} from '@/lib/server/settings'
 import { tierLabel } from '@/lib/riot'
 
 /** 조회만 해보고 아무것도 저장하지 않는다 */
@@ -61,11 +77,18 @@ const NO_STORE = { 'Cache-Control': 'private, no-store' }
  * .env 로 넣은 값이 있으면 그쪽이 우선이고, 화면에서는 바꿀 수 없다고 알린다.
  */
 async function state() {
-  const [riot, pubg] = await Promise.all([keyStatus(), pubgKeyStatus()])
-  return {
-    riot: { set: riot.set, source: riot.source, masked: maskSecret(riot.value) },
-    pubg: { set: pubg.set, source: pubg.source, masked: maskSecret(pubg.value) },
-  }
+  const [riot, pubg, fc, maple] = await Promise.all([
+    keyStatus(),
+    pubgKeyStatus(),
+    nexonKeyStatus('fconline'),
+    nexonKeyStatus('maple'),
+  ])
+  const slot = (k: { set: boolean; source: 'env' | 'db' | null; value: string | null }) => ({
+    set: k.set,
+    source: k.source,
+    masked: maskSecret(k.value),
+  })
+  return { riot: slot(riot), pubg: slot(pubg), fconline: slot(fc), maple: slot(maple) }
 }
 
 export async function GET() {
@@ -90,8 +113,10 @@ export async function POST(req: Request) {
     return Response.json({ error: '요청을 읽지 못했습니다' }, { status: 400 })
   }
 
+  const op = String(body.op ?? '')
+
   try {
-    switch (String(body.op ?? '')) {
+    switch (op) {
       case 'saveRiotKey': {
         const value = String(body.value ?? '').trim()
         if (value && !/^RGAPI-[A-Za-z0-9-]{8,60}$/.test(value)) {
@@ -120,6 +145,72 @@ export async function POST(req: Request) {
         const test = value ? await checkPubgKey() : { ok: false, message: '키를 지웠습니다.' }
         return Response.json({ ...(await state()), test }, { headers: NO_STORE })
       }
+      // 넥슨은 게임마다 애플리케이션이 달라 키도 따로 받는다.
+      case 'saveFconlineKey':
+      case 'saveMapleKey': {
+        const maple = op === 'saveMapleKey'
+        const value = String(body.value ?? '').trim()
+        // 넥슨 키는 test_ 또는 live_ 로 시작하는 긴 문자열이다.
+        if (value && !/^(test|live)_[A-Za-z0-9]{16,}$/.test(value)) {
+          return Response.json(
+            { error: '키 형태가 아닙니다. openapi.nexon.com 에서 받은 값을 그대로 넣어주세요.' },
+            { status: 400 },
+          )
+        }
+        await setSetting(maple ? NEXON_MAPLE_KEY : NEXON_FC_KEY, value || null)
+        const test = value
+          ? await checkNexonKey(maple ? 'maple' : 'fconline')
+          : { ok: false, message: '키를 지웠습니다.' }
+        return Response.json({ ...(await state()), test }, { headers: NO_STORE })
+      }
+      case 'testFconlineKey':
+        return Response.json(
+          { ...(await state()), test: await checkNexonKey('fconline') },
+          { headers: NO_STORE },
+        )
+      case 'testMapleKey':
+        return Response.json(
+          { ...(await state()), test: await checkNexonKey('maple') },
+          { headers: NO_STORE },
+        )
+
+      // 넥슨 두 게임도 저장 없이 조회만 해본다.
+      case 'lookupNexon': {
+        const raw = String(body.value ?? '').trim()
+        const maple = String(body.platform ?? '') === 'maple'
+        if (!raw) return Response.json({ error: '닉네임을 넣어주세요' }, { status: 400 })
+
+        const player = maple ? await lookupMaple(raw) : await lookupFconline(raw)
+        if (!player) {
+          return Response.json(
+            {
+              lookup: {
+                kind: 'nexon',
+                ok: false,
+                message: maple
+                  ? '그런 메이플 캐릭터를 찾지 못했습니다.'
+                  : '그런 FC 온라인 구단을 찾지 못했습니다.',
+              },
+            },
+            { headers: NO_STORE },
+          )
+        }
+        const found = maple ? await mapleStats(player.id) : await fconlineStats(player.id)
+        return Response.json(
+          {
+            lookup: {
+              kind: 'nexon',
+              ok: true,
+              name: player.name,
+              tier: found.tier ?? '등급 없음',
+              record: found.detail ?? '기록 없음',
+              kda: found.stats ? JSON.stringify(found.stats) : '없음',
+            },
+          },
+          { headers: NO_STORE },
+        )
+      }
+
       case 'testPubgKey':
         return Response.json({ ...(await state()), test: await checkPubgKey() }, { headers: NO_STORE })
 
@@ -173,7 +264,7 @@ export async function POST(req: Request) {
         return Response.json({ error: '알 수 없는 요청입니다' }, { status: 400 })
     }
   } catch (err) {
-    if (err instanceof RiotError || err instanceof PubgError) {
+    if (err instanceof RiotError || err instanceof PubgError || err instanceof NexonError) {
       return Response.json({ error: err.message }, { status: 400 })
     }
     console.error('[api/admin/settings]', body.op, err)

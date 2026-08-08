@@ -11,6 +11,12 @@ const cache = new Map<string, { value: string | null; at: number }>()
 
 export const RIOT_KEY = 'riot_api_key'
 export const PUBG_KEY = 'pubg_api_key'
+/**
+ * 넥슨 오픈 API. 애플리케이션을 게임마다 따로 등록하므로 키도 게임마다 다르다.
+ * 한 키로 다른 게임을 부르면 넥슨이 거절한다.
+ */
+export const NEXON_FC_KEY = 'nexon_fconline_api_key'
+export const NEXON_MAPLE_KEY = 'nexon_maple_api_key'
 /** 마지막 호출이 성공했는지. 키가 만료되면 여기가 먼저 0 이 된다. */
 export const RIOT_KEY_OK = 'riot_api_key_ok'
 export const RIOT_KEY_CHECKED = 'riot_api_key_checked_at'

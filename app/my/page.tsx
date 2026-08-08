@@ -131,6 +131,8 @@ export default function MyPage() {
 
         <RiotLink me={me} />
         <GameLink me={me} game="pubg" />
+        <GameLink me={me} game="fconline" />
+        <GameLink me={me} game="maple" />
 
         <PromiseDetail user={me} />
 

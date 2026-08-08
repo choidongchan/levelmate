@@ -9,9 +9,11 @@ type KeyState = { set: boolean; source: 'env' | 'db' | null; masked: string | nu
 type Status = {
   riot: KeyState
   pubg: KeyState
+  fconline: KeyState
+  maple: KeyState
   test?: { ok: boolean; message: string }
   lookup?: {
-    kind: 'riot' | 'pubg'
+    kind: 'riot' | 'pubg' | 'nexon'
     ok: boolean
     message?: string
     name?: string
@@ -120,8 +122,49 @@ export default function AdminSettingsPage() {
           갱신하게 막아두었습니다.
         </KeyPanel>
 
+        <KeyPanel
+          title="FC 온라인 API 키"
+          state={status?.fconline}
+          saveOp="saveFconlineKey"
+          testOp="testFconlineKey"
+          placeholder="test_… 또는 live_…"
+          envName="NEXON_FCONLINE_API_KEY"
+          busy={busy}
+          lastOp={lastOp}
+          send={send}
+          test={status?.test}
+          error={error}
+        >
+          openapi.nexon.com 에 <b className="text-white">EA SPORTS FC 온라인</b>으로 등록한
+          애플리케이션의 키입니다. 넥슨은 게임마다 애플리케이션이 따로라{' '}
+          <b className="text-white">메이플 키와 다릅니다.</b>
+          <br />
+          라이엇과 달리 <b className="text-white">만료되지 않습니다.</b> 한 번 넣으면 계속 씁니다.
+        </KeyPanel>
+
+        <KeyPanel
+          title="메이플스토리 API 키"
+          state={status?.maple}
+          saveOp="saveMapleKey"
+          testOp="testMapleKey"
+          placeholder="test_… 또는 live_…"
+          envName="NEXON_MAPLE_API_KEY"
+          busy={busy}
+          lastOp={lastOp}
+          send={send}
+          test={status?.test}
+          error={error}
+        >
+          openapi.nexon.com 에 <b className="text-white">메이플스토리</b>로 등록한 애플리케이션의
+          키입니다. 위 FC 온라인 키와 서로 바꿔 넣으면 둘 다 안 됩니다.
+          <br />
+          메이플 전적은 <b className="text-white">하루에 한 번</b> 넥슨이 갱신합니다. 오늘 올린
+          레벨은 내일 반영됩니다.
+        </KeyPanel>
+
         <RiotLookup busy={busy} send={send} lookup={status?.lookup} />
         <PubgLookup busy={busy} send={send} lookup={status?.lookup} />
+        <NexonLookup busy={busy} send={send} lookup={status?.lookup} />
 
         <Panel title="알아두기">
           <ul className="flex list-disc flex-col gap-2 py-1 pl-4 text-[11px] leading-relaxed text-muted">
@@ -331,6 +374,81 @@ function RiotLookup({
               <dd className={shown.canVerify ? 'text-online' : 'text-[#fbbf24]'}>
                 {shown.canVerify ? '가능' : '불가 (라이엇이 소환사 ID를 안 줌)'}
               </dd>
+            </dl>
+          ) : (
+            <p className="rounded-xl bg-[#f43f5e]/10 px-3.5 py-2.5 text-[11px] text-[#f43f5e]">
+              {shown.message}
+            </p>
+          ))}
+      </div>
+    </Panel>
+  )
+}
+
+function NexonLookup({
+  busy,
+  send,
+  lookup,
+}: {
+  busy: string | null
+  send: Send
+  lookup: Status['lookup']
+}) {
+  const [value, setValue] = useState('')
+  const [game, setGame] = useState('fconline')
+  const mine = busy === 'lookupNexon'
+  const shown = lookup?.kind === 'nexon' ? lookup : undefined
+
+  return (
+    <Panel title="넥슨 계정 조회 시험">
+      <div className="flex flex-col gap-3 py-1">
+        <p className="text-[11px] leading-relaxed text-muted">
+          FC 온라인은 <b className="text-white">감독명</b>, 메이플은{' '}
+          <b className="text-white">캐릭터명</b>을 넣습니다. 저장하지 않습니다.
+        </p>
+
+        <div className="flex gap-2">
+          <select
+            value={game}
+            onChange={(e) => setGame(e.target.value)}
+            className="shrink-0 rounded-xl bg-white/6 px-3 py-2.5 text-xs outline-none [color-scheme:dark]"
+          >
+            <option value="fconline" className="bg-[#14141d]">
+              FC 온라인
+            </option>
+            <option value="maple" className="bg-[#14141d]">
+              메이플
+            </option>
+          </select>
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={game === 'maple' ? '캐릭터명' : '감독명'}
+            autoComplete="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 text-xs outline-none placeholder:text-dim"
+          />
+          <button
+            type="button"
+            disabled={!value.trim() || busy !== null}
+            onClick={() => void send('lookupNexon', value, game)}
+            className="shrink-0 rounded-xl bg-white/8 px-4 py-2.5 text-xs font-bold transition hover:bg-white/14 disabled:opacity-40"
+          >
+            {mine ? '조회 중…' : '조회'}
+          </button>
+        </div>
+
+        {shown &&
+          (shown.ok ? (
+            <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-white/5 px-3.5 py-3 text-[11px]">
+              <dt className="text-dim">계정</dt>
+              <dd className="font-bold">{shown.name}</dd>
+              <dt className="text-dim">등급</dt>
+              <dd className="font-bold">{shown.tier}</dd>
+              <dt className="text-dim">한 줄 요약</dt>
+              <dd>{shown.record}</dd>
+              <dt className="text-dim">원본 값</dt>
+              <dd className="font-mono break-all">{shown.kda}</dd>
             </dl>
           ) : (
             <p className="rounded-xl bg-[#f43f5e]/10 px-3.5 py-2.5 text-[11px] text-[#f43f5e]">

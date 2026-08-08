@@ -2,6 +2,13 @@ import { Prisma } from '@prisma/client'
 import { db } from '@/lib/db'
 import { readViewer } from '@/lib/server/auth'
 import {
+  fconlineStats,
+  lookupFconline,
+  lookupMaple,
+  mapleStats,
+  NexonError,
+} from '@/lib/server/nexon'
+import {
   DEFAULT_PUBG_PLATFORM,
   getRankedStats,
   lookupPlayer,
@@ -10,15 +17,56 @@ import {
   SYNC_COOLDOWN_MS,
 } from '@/lib/server/pubg'
 import { buildSnapshot } from '@/lib/server/snapshot'
+import type { GameKey } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * 라이엇 말고 다른 게임의 계정 연결.
  *
- * 지금은 배틀그라운드만. 게임이 늘어도 여기에 갈래만 하나씩 더 붙이면 된다.
+ * 게임마다 부르는 곳이 다르지만 하는 일은 같다 — 이름으로 찾고, 전적을
+ * 가져오고, DB 에 담는다. 그래서 다른 점만 아래 표에 적어두고 나머지
+ * 흐름은 한 벌로 쓴다. 게임이 늘면 여기에 한 줄만 더하면 된다.
+ *
+ * 라이엇(롤)만 따로 두었다. 본인 인증 코드가 있어 흐름이 다르다.
  */
-const GAMES = ['pubg'] as const
+
+type Found = { id: string; name: string }
+type Stats = {
+  tier: string | null
+  detail: string | null
+  stats: Record<string, number | string> | null
+}
+
+type Provider = {
+  /** 계정을 어느 쪽에 만들었는지 골라야 하는 게임만 */
+  platforms?: readonly string[]
+  defaultPlatform?: string
+  /** 못 찾았을 때 사람에게 보여줄 말 */
+  notFound: string
+  lookup(name: string, platform: string): Promise<Found | null>
+  stats(externalId: string, platform: string): Promise<Stats>
+}
+
+const PROVIDERS: Partial<Record<GameKey, Provider>> = {
+  pubg: {
+    platforms: PUBG_PLATFORMS.map((p) => p.key),
+    defaultPlatform: DEFAULT_PUBG_PLATFORM,
+    notFound: '그런 배그 계정을 찾지 못했습니다. 닉네임과 플랫폼(카카오/스팀)을 확인해주세요.',
+    lookup: (name, platform) => lookupPlayer(name, platform),
+    stats: (id, platform) => getRankedStats(id, platform),
+  },
+  fconline: {
+    notFound: '그런 FC 온라인 구단을 찾지 못했습니다. 감독명을 확인해주세요.',
+    lookup: (name) => lookupFconline(name),
+    stats: (id) => fconlineStats(id),
+  },
+  maple: {
+    notFound: '그런 메이플 캐릭터를 찾지 못했습니다. 캐릭터명을 확인해주세요.',
+    lookup: (name) => lookupMaple(name),
+    stats: (id) => mapleStats(id),
+  },
+}
 
 export async function POST(req: Request) {
   let body: { op?: unknown; game?: unknown; name?: unknown; platform?: unknown }
@@ -32,17 +80,16 @@ export async function POST(req: Request) {
   if (!viewer.userId) return fail('로그인이 필요합니다', 401)
   const userId = viewer.userId
 
-  const game = String(body.game ?? '')
-  if (!GAMES.includes(game as (typeof GAMES)[number])) {
-    return fail('아직 연동하지 않은 게임입니다', 400)
-  }
+  const game = String(body.game ?? '') as GameKey
+  const provider = PROVIDERS[game]
+  if (!provider) return fail('아직 연동하지 않은 게임입니다', 400)
 
   try {
     switch (String(body.op ?? '')) {
       case 'link':
-        return await link(userId, String(body.name ?? ''), String(body.platform ?? ''))
+        return await link(userId, game, provider, String(body.name ?? ''), String(body.platform ?? ''))
       case 'sync':
-        return await sync(userId)
+        return await sync(userId, game, provider)
       case 'unlink':
         await db.gameAccount.deleteMany({ where: { userId, game } })
         return ok()
@@ -50,8 +97,8 @@ export async function POST(req: Request) {
         return fail('알 수 없는 요청입니다', 400)
     }
   } catch (err) {
-    if (err instanceof PubgError) return fail(err.message, 400)
-    console.error('[api/game]', body.op, err)
+    if (err instanceof PubgError || err instanceof NexonError) return fail(err.message, 400)
+    console.error('[api/game]', game, body.op, err)
     return fail('처리하지 못했습니다', 500)
   }
 }
@@ -64,71 +111,66 @@ function fail(error: string, status: number) {
   return Response.json({ error }, { status })
 }
 
-async function link(userId: string, rawName: string, rawPlatform: string) {
+/** 게임이 요구하면 고른 값을, 아니면 기본값을 쓴다 */
+function platformOf(provider: Provider, raw: string) {
+  if (!provider.platforms) return null
+  return provider.platforms.includes(raw) ? raw : (provider.defaultPlatform ?? null)
+}
+
+async function link(
+  userId: string,
+  game: GameKey,
+  provider: Provider,
+  rawName: string,
+  rawPlatform: string,
+) {
   const name = rawName.trim()
-  if (!name) return fail('배그 닉네임을 입력해주세요', 400)
+  if (!name) return fail('게임 닉네임을 입력해주세요', 400)
 
-  const platform = PUBG_PLATFORMS.some((p) => p.key === rawPlatform)
-    ? rawPlatform
-    : DEFAULT_PUBG_PLATFORM
-
-  const player = await lookupPlayer(name, platform)
-  if (!player) {
-    return fail('그런 배그 계정을 찾지 못했습니다. 닉네임과 플랫폼(카카오/스팀)을 확인해주세요.', 400)
-  }
+  const platform = platformOf(provider, rawPlatform)
+  const player = await provider.lookup(name, platform ?? '')
+  if (!player) return fail(provider.notFound, 400)
 
   // 한 계정을 여러 사람이 걸어둘 수 없다. 그러면 전적을 빌려 쓸 수 있다.
   const taken = await db.gameAccount.findUnique({
-    where: { game_externalId: { game: 'pubg', externalId: player.id } },
+    where: { game_externalId: { game, externalId: player.id } },
   })
   if (taken && taken.userId !== userId) {
     return fail('이미 다른 회원이 연결한 계정입니다.', 400)
   }
 
-  const found = await getRankedStats(player.id, platform)
+  const found = await provider.stats(player.id, platform ?? '')
+  const data = {
+    platform,
+    name: player.name,
+    externalId: player.id,
+    tier: found.tier,
+    detail: found.detail,
+    stats: found.stats ?? Prisma.DbNull,
+    syncedAt: new Date(),
+  }
 
   await db.gameAccount.upsert({
-    where: { userId_game: { userId, game: 'pubg' } },
-    create: {
-      id: `ga-pubg-${userId}`.slice(0, 60),
-      userId,
-      game: 'pubg',
-      platform,
-      name: player.name,
-      externalId: player.id,
-      tier: found.tier,
-      detail: found.detail,
-      stats: found.stats ?? Prisma.DbNull,
-      syncedAt: new Date(),
-    },
-    update: {
-      platform,
-      name: player.name,
-      externalId: player.id,
-      tier: found.tier,
-      detail: found.detail,
-      stats: found.stats ?? Prisma.DbNull,
-      syncedAt: new Date(),
-    },
+    where: { userId_game: { userId, game } },
+    create: { id: `ga-${game}-${userId}`.slice(0, 60), userId, game, ...data },
+    update: data,
   })
 
   return ok()
 }
 
-async function sync(userId: string) {
-  const row = await db.gameAccount.findUnique({
-    where: { userId_game: { userId, game: 'pubg' } },
-  })
-  if (!row) return fail('먼저 배그 계정을 연결해주세요', 400)
+async function sync(userId: string, game: GameKey, provider: Provider) {
+  const row = await db.gameAccount.findUnique({ where: { userId_game: { userId, game } } })
+  if (!row) return fail('먼저 계정을 연결해주세요', 400)
 
   if (row.syncedAt && Date.now() - row.syncedAt.getTime() < SYNC_COOLDOWN_MS) {
     const left = Math.ceil((SYNC_COOLDOWN_MS - (Date.now() - row.syncedAt.getTime())) / 60000)
     return fail(`방금 갱신했습니다. ${left}분 뒤에 다시 할 수 있어요.`, 400)
   }
 
-  const found = await getRankedStats(row.externalId, row.platform ?? DEFAULT_PUBG_PLATFORM)
+  const found = await provider.stats(row.externalId, row.platform ?? provider.defaultPlatform ?? '')
   await db.gameAccount.update({
-    where: { userId_game: { userId, game: 'pubg' } },
+    where: { userId_game: { userId, game } },
     data: {
       tier: found.tier,
       detail: found.detail,

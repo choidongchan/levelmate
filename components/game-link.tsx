@@ -15,6 +15,14 @@ const PLATFORMS: Partial<Record<GameKey, { key: string; label: string }[]>> = {
 
 const HINT: Partial<Record<GameKey, string>> = {
   pubg: '게임 안에서 쓰는 닉네임 그대로 넣어주세요. 대문자·소문자를 가립니다.',
+  fconline: 'FC 온라인 구단의 감독명을 넣어주세요.',
+  maple: '메이플 캐릭터명을 넣어주세요. 본캐로 넣으시면 됩니다.',
+}
+
+/** 무엇을 넣어야 하는지 게임마다 다르다 */
+const NAME_LABEL: Partial<Record<GameKey, string>> = {
+  fconline: '감독명',
+  maple: '캐릭터명',
 }
 
 /**
@@ -67,7 +75,7 @@ export function GameLink({ me, game }: { me: User; game: GameKey }) {
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="게임 닉네임"
+            placeholder={NAME_LABEL[game] ?? '게임 닉네임'}
             maxLength={30}
             spellCheck={false}
             className="min-w-0 flex-1 rounded-2xl bg-white/6 px-4 py-3 text-sm outline-none placeholder:text-dim"
@@ -163,6 +171,10 @@ function GameStats({ stats }: { stats: Record<string, number | string> }) {
   if (typeof stats.avgDamage === 'number') rows.push(['평균 딜', `${stats.avgDamage}`])
   if (typeof stats.winRate === 'number') rows.push(['승률', `${stats.winRate}%`])
   if (typeof stats.wins === 'number') rows.push(['우승', `${stats.wins}회`])
+  if (typeof stats.level === 'number' && stats.level) rows.push(['레벨', `${stats.level}`])
+  if (typeof stats.power === 'number' && stats.power)
+    rows.push(['전투력', stats.power.toLocaleString('ko-KR')])
+  if (typeof stats.world === 'string' && stats.world) rows.push(['월드', stats.world])
   if (rows.length === 0) return null
 
   return (
