@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '@/components/icon'
 import { MateRow } from '@/components/mate-row'
+import { useView, ViewToggle } from '@/components/view-toggle'
 import { ScreenHeader } from '@/components/screen-header'
 import { rolesFor } from '@/lib/games'
 import { useStore } from '@/lib/store'
@@ -17,6 +18,7 @@ import {
 
 export default function SearchPage() {
   const state = useStore()
+  const [view, setView] = useView()
   const [query, setQuery] = useState('')
   const [kind, setKind] = useState<ListingKind | 'ALL'>('ALL')
   const [game, setGame] = useState<GameKey | 'ALL'>('ALL')
@@ -145,9 +147,12 @@ export default function SearchPage() {
           </Chip>
         </div>
 
-        <p className="text-xs text-dim">
-          <span className="font-bold text-white">{results.length}</span>개의 글
-        </p>
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-dim">
+            <span className="font-bold text-white">{results.length}</span>개의 글
+          </p>
+          <ViewToggle value={view} onChange={setView} />
+        </div>
 
         {results.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-16 text-center">
@@ -158,7 +163,13 @@ export default function SearchPage() {
             <p className="text-xs text-dim">필터를 바꿔보세요</p>
           </div>
         ) : (
-          <div className="grid gap-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <div
+            className={
+              view === 'grid'
+                ? 'grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
+                : 'flex flex-col gap-2'
+            }
+          >
             {results.map((l, i) => {
               const author = state.users.find((u) => u.id === l.userId)
               if (!author) return null
@@ -169,6 +180,7 @@ export default function SearchPage() {
                   listing={l}
                   index={i}
                   href={`/listings/${l.id}`}
+                  view={view}
                 />
               )
             })}

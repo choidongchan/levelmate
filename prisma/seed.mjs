@@ -145,6 +145,273 @@ const USERS = [
   },
 ]
 
+/**
+ * 예시 회원들의 연결된 게임 계정.
+ *
+ * 실제 게임사에서 가져온 값이 아니라 화면을 보기 위한 예시다. 진짜 계정을
+ * 연결하면 이 값들은 게임사가 주는 값으로 덮인다. 예시 회원 말고 실제
+ * 회원이 한 명이라도 있으면 이 파일 전체가 건너뛰어진다.
+ *
+ * 한 사람이 여러 게임을 하는 모습도 보여야 해서 두세 개씩 붙였다.
+ */
+const RIOT_ACCOUNTS = [
+  {
+    id: 'ra-midking',
+    userId: 'u-midking',
+    puuid: 'seed-puuid-midking',
+    gameName: '미드장인',
+    tagLine: 'KR1',
+    summonerId: 'seed-sid-midking',
+    summonerLevel: 412,
+    tier: 'MASTER',
+    division: null,
+    lp: 137,
+    wins: 214,
+    losses: 178,
+    mainRole: 'MID',
+    champions: [
+      { id: 7, name: '르블랑', games: 6, wins: 4 },
+      { id: 103, name: '아리', games: 3, wins: 2 },
+      { id: 245, name: '엑코', games: 1, wins: 1 },
+    ],
+    kills: 8.2,
+    deaths: 4.1,
+    assists: 6.9,
+    recentGames: 10,
+    verifiedAt: '2026-08-05T05:00:00.000Z',
+    syncedAt: '2026-08-08T01:00:00.000Z',
+  },
+  {
+    id: 'ra-nightowl',
+    userId: 'u-nightowl',
+    puuid: 'seed-puuid-nightowl',
+    gameName: '한밤의궁수',
+    tagLine: 'KR2',
+    summonerId: 'seed-sid-nightowl',
+    summonerLevel: 233,
+    tier: 'PLATINUM',
+    division: 'II',
+    lp: 64,
+    wins: 96,
+    losses: 88,
+    mainRole: 'ADC',
+    champions: [
+      { id: 22, name: '애쉬', games: 5, wins: 3 },
+      { id: 51, name: '케이틀린', games: 3, wins: 1 },
+    ],
+    kills: 6.4,
+    deaths: 5.2,
+    assists: 7.7,
+    recentGames: 10,
+    verifiedAt: null,
+    syncedAt: '2026-08-08T02:10:00.000Z',
+  },
+  {
+    id: 'ra-newbie',
+    userId: 'u-newbie',
+    puuid: 'seed-puuid-newbie',
+    gameName: '초보탈출',
+    tagLine: 'KR3',
+    summonerLevel: 41,
+    tier: 'IRON',
+    division: 'III',
+    lp: 12,
+    wins: 14,
+    losses: 26,
+    mainRole: 'SUPPORT',
+    champions: [{ id: 12, name: '알리스타', games: 4, wins: 1 }],
+    kills: 2.1,
+    deaths: 7.8,
+    assists: 9.3,
+    recentGames: 8,
+    verifiedAt: null,
+    syncedAt: '2026-08-07T12:00:00.000Z',
+  },
+]
+
+const GAME_ACCOUNTS = [
+  {
+    id: 'ga-pubg-potato',
+    userId: 'u-potato',
+    game: 'pubg',
+    platform: 'kakao',
+    name: '감자칩',
+    externalId: 'seed-pubg-potato',
+    tier: '다이아몬드 3',
+    detail: '스쿼드 1인칭 · 4,123 RP · 128판',
+    stats: { mode: 'squad-fpp', rp: 4123, rounds: 128, wins: 11, kda: 3.42, avgDamage: 412, winRate: 9 },
+    syncedAt: '2026-08-08T03:00:00.000Z',
+  },
+  {
+    id: 'ga-pubg-overtime',
+    userId: 'u-overtime',
+    game: 'pubg',
+    platform: 'steam',
+    name: 'NightShift',
+    externalId: 'seed-pubg-overtime',
+    tier: '플래티넘 1',
+    detail: '듀오 · 3,480 RP · 64판',
+    stats: { mode: 'duo', rp: 3480, rounds: 64, wins: 4, kda: 2.18, avgDamage: 318, winRate: 6 },
+    syncedAt: '2026-08-08T04:00:00.000Z',
+  },
+  {
+    id: 'ga-fconline-coach',
+    userId: 'u-coach',
+    game: 'fconline',
+    platform: null,
+    name: '코치정',
+    externalId: 'seed-fc-coach',
+    tier: '월드클래스1',
+    detail: '공식경기 최고등급 · Lv.87',
+    stats: { level: 87, division: 1000 },
+    syncedAt: '2026-08-08T03:30:00.000Z',
+  },
+  {
+    id: 'ga-maple-mapler',
+    userId: 'u-mapler',
+    game: 'maple',
+    platform: null,
+    name: '단풍잎',
+    externalId: 'seed-maple-mapler',
+    tier: 'Lv.262 아델',
+    detail: '스카니아 · 단풍길드 · 전투력 1.8억',
+    stats: { level: 262, power: 184000000, world: '스카니아', job: '아델' },
+    syncedAt: '2026-08-08T02:40:00.000Z',
+  },
+  {
+    id: 'ga-sudden-overtime',
+    userId: 'u-overtime',
+    game: 'sudden',
+    platform: null,
+    name: '야근전사',
+    externalId: 'seed-sa-overtime',
+    tier: '준장 3호봉',
+    detail: '92레벨 · 매너 우수',
+    stats: { level: 92 },
+    syncedAt: '2026-08-08T04:10:00.000Z',
+  },
+  {
+    id: 'ga-wow-nightowl',
+    userId: 'u-nightowl',
+    game: 'wow',
+    platform: 'hyjal',
+    name: '밤활',
+    externalId: 'hyjal:seed-wow-nightowl',
+    tier: '80레벨 사격 사냥꾼',
+    detail: '하이잘 · 달빛술사 · 아이템 레벨 636',
+    stats: { level: 80, itemLevel: 636, job: '사냥꾼', world: '하이잘' },
+    syncedAt: '2026-08-08T05:00:00.000Z',
+  },
+  {
+    id: 'ga-d3-midking',
+    userId: 'u-midking',
+    game: 'd3',
+    platform: null,
+    name: '미드장인#3721',
+    externalId: '미드장인-3721',
+    tier: '파라곤 1,204',
+    detail: '악마사냥꾼 · 영웅 6명',
+    stats: { paragon: 1204, heroes: 6, job: '악마사냥꾼' },
+    syncedAt: '2026-08-08T05:20:00.000Z',
+  },
+  {
+    id: 'ga-ow-overtime',
+    userId: 'u-overtime',
+    game: 'overwatch',
+    platform: null,
+    name: '야근전사#3311',
+    externalId: 'seed-ow-overtime',
+    tier: '다이아몬드 2',
+    detail: '탱커 · 승률 54% · 시즌 128판',
+    stats: { rounds: 128, winRate: 54, job: '탱커' },
+    syncedAt: '2026-08-08T04:20:00.000Z',
+  },
+  {
+    id: 'ga-val-newbie',
+    userId: 'u-newbie',
+    game: 'valorant',
+    platform: null,
+    name: '초보탈출#KR3',
+    externalId: 'seed-val-newbie',
+    tier: '아이언 2',
+    detail: '타격대 · 승률 38% · 42판',
+    stats: { rounds: 42, winRate: 38, job: '타격대' },
+    syncedAt: '2026-08-07T13:00:00.000Z',
+  },
+  {
+    id: 'ga-lostark-mapler',
+    userId: 'u-mapler',
+    game: 'lostark',
+    platform: null,
+    name: '단풍잎',
+    externalId: 'seed-loa-mapler',
+    tier: '아이템 레벨 1,675',
+    detail: '카마인 · 브레이커 · 원정대 62',
+    stats: { itemLevel: 1675, level: 62, job: '브레이커', world: '카마인' },
+    syncedAt: '2026-08-08T02:50:00.000Z',
+  },
+  {
+    id: 'ga-dnf-coach',
+    userId: 'u-coach',
+    game: 'dnf',
+    platform: null,
+    name: '코치정',
+    externalId: 'seed-dnf-coach',
+    tier: '명성 78,400',
+    detail: '카인 · 眞 버서커 · Lv.110',
+    stats: { level: 110, power: 78400, job: '버서커', world: '카인' },
+    syncedAt: '2026-08-08T03:40:00.000Z',
+  },
+  {
+    id: 'ga-sc-midking',
+    userId: 'u-midking',
+    game: 'starcraft',
+    platform: null,
+    name: '미드장인',
+    externalId: 'seed-sc-midking',
+    tier: '마스터',
+    detail: '테란 · 시즌 승률 61% · 214판',
+    stats: { rounds: 214, winRate: 61, job: '테란' },
+    syncedAt: '2026-08-08T05:40:00.000Z',
+  },
+  {
+    id: 'ga-er-nightowl',
+    userId: 'u-nightowl',
+    game: 'eternalreturn',
+    platform: null,
+    name: '한밤의궁수',
+    externalId: 'seed-er-nightowl',
+    tier: '미스릴 4',
+    detail: '리 다이린 · 평균 순위 4.2위 · 96판',
+    stats: { rounds: 96, kda: 3.1 },
+    syncedAt: '2026-08-08T02:20:00.000Z',
+  },
+  {
+    id: 'ga-kart-potato',
+    userId: 'u-potato',
+    game: 'kart',
+    platform: null,
+    name: '감자칩',
+    externalId: 'seed-kart-potato',
+    tier: '프로',
+    detail: '스피드전 · 승률 47% · 312판',
+    stats: { rounds: 312, winRate: 47 },
+    syncedAt: '2026-08-08T03:10:00.000Z',
+  },
+  {
+    id: 'ga-apex-potato',
+    userId: 'u-potato',
+    game: 'apex',
+    platform: null,
+    name: 'PotatoChip',
+    externalId: 'seed-apex-potato',
+    tier: '플래티넘 3',
+    detail: '레이스 · 평균 딜 612 · 88판',
+    stats: { rounds: 88, avgDamage: 612, kda: 1.9, job: '레이스' },
+    syncedAt: '2026-08-08T03:20:00.000Z',
+  },
+]
+
 const LISTINGS = [
   {
     id: 'l-1',
@@ -415,6 +682,20 @@ async function main() {
       },
     })
   }
+  for (const r of RIOT_ACCOUNTS) {
+    await db.riotAccount.create({
+      data: {
+        ...r,
+        verifiedAt: r.verifiedAt ? new Date(r.verifiedAt) : null,
+        syncedAt: r.syncedAt ? new Date(r.syncedAt) : null,
+      },
+    })
+  }
+  for (const g of GAME_ACCOUNTS) {
+    await db.gameAccount.create({
+      data: { ...g, syncedAt: g.syncedAt ? new Date(g.syncedAt) : null },
+    })
+  }
   for (const l of LISTINGS) {
     await db.listing.create({ data: { ...l, createdAt: new Date(l.createdAt) } })
   }
@@ -426,7 +707,10 @@ async function main() {
   for (const m of MESSAGES) {
     await db.message.create({ data: { ...m, createdAt: new Date(m.createdAt) } })
   }
-  console.log(`예시 데이터를 넣었습니다. 회원 ${USERS.length}명, 글 ${LISTINGS.length}개.`)
+  console.log(
+    `예시 데이터를 넣었습니다. 회원 ${USERS.length}명, 글 ${LISTINGS.length}개, ` +
+      `연결된 게임 계정 ${RIOT_ACCOUNTS.length + GAME_ACCOUNTS.length}개.`,
+  )
 }
 
 main()

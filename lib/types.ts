@@ -2,7 +2,29 @@ import type { LolRole, RiotProfile } from './riot'
 
 export type { LolRole, RiotProfile }
 
-export type GameKey = 'lol' | 'valorant' | 'pubg' | 'fconline' | 'overwatch' | 'maple' | 'etc'
+export type GameKey =
+  | 'lol'
+  | 'valorant'
+  | 'pubg'
+  | 'fconline'
+  | 'overwatch'
+  | 'maple'
+  | 'sudden'
+  | 'lineage'
+  | 'aion'
+  | 'bns'
+  | 'tl'
+  | 'wow'
+  | 'd3'
+  | 'starcraft'
+  | 'lostark'
+  | 'dnf'
+  | 'eternalreturn'
+  | 'kart'
+  | 'mabinogi'
+  | 'cs2'
+  | 'apex'
+  | 'etc'
 
 /** 라이엇 말고 다른 게임에서 가져온 전적. 게임마다 담기는 값이 다르다. */
 export type GameProfile = {
@@ -22,8 +44,26 @@ export const GAMES: Record<GameKey, { name: string; short: string; color: string
   valorant: { name: '발로란트', short: 'VAL', color: '#ff4655' },
   pubg: { name: '배틀그라운드', short: 'PUBG', color: '#f2a900' },
   fconline: { name: 'FC 온라인', short: 'FC', color: '#3b82f6' },
-  overwatch: { name: '오버워치', short: 'OW', color: '#f99e1a' },
+  overwatch: { name: '오버워치 2', short: 'OW', color: '#f99e1a' },
   maple: { name: '메이플스토리', short: 'MAPLE', color: '#f97316' },
+  sudden: { name: '서든어택', short: 'SA', color: '#22c55e' },
+  // 엔씨. PC방에서 같이 할 수 있는 PC 게임 위주로 넣는다.
+  lineage: { name: '리니지', short: 'LIN', color: '#c9a227' },
+  aion: { name: '아이온', short: 'AION', color: '#38bdf8' },
+  bns: { name: '블레이드 앤 소울', short: 'BNS', color: '#ef4444' },
+  tl: { name: '쓰론 앤 리버티', short: 'TL', color: '#8b5cf6' },
+  // 블리자드. 오버워치는 블리자드가 전적을 안 열어 위쪽 overwatch 로 남는다.
+  wow: { name: '월드 오브 워크래프트', short: 'WOW', color: '#f4c430' },
+  d3: { name: '디아블로 3', short: 'D3', color: '#a3371f' },
+  // 아래는 아직 게임사가 전적을 열지 않아 직접 적는 게임들
+  starcraft: { name: '스타크래프트', short: 'SC', color: '#4f8ef7' },
+  lostark: { name: '로스트아크', short: 'LOA', color: '#d4af37' },
+  dnf: { name: '던전앤파이터', short: 'DNF', color: '#e11d48' },
+  eternalreturn: { name: '이터널 리턴', short: 'ER', color: '#06b6d4' },
+  kart: { name: '카트라이더 드리프트', short: 'KART', color: '#fb7185' },
+  mabinogi: { name: '마비노기', short: 'MABI', color: '#84cc16' },
+  cs2: { name: '카운터 스트라이크 2', short: 'CS2', color: '#f0a500' },
+  apex: { name: '에이펙스 레전드', short: 'APEX', color: '#d63e2f' },
   etc: { name: '기타', short: 'ETC', color: '#94a3b8' },
 }
 

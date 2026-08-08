@@ -133,6 +133,9 @@ export default function MyPage() {
         <GameLink me={me} game="pubg" />
         <GameLink me={me} game="fconline" />
         <GameLink me={me} game="maple" />
+        <GameLink me={me} game="sudden" />
+        <GameLink me={me} game="wow" />
+        <GameLink me={me} game="d3" />
 
         <PromiseDetail user={me} />
 

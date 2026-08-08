@@ -1,4 +1,4 @@
-import { getSetting, NEXON_FC_KEY, NEXON_MAPLE_KEY } from './settings'
+import { getSetting, NEXON_FC_KEY, NEXON_MAPLE_KEY, NEXON_SA_KEY } from './settings'
 
 /**
  * 넥슨 오픈 API.
@@ -13,7 +13,7 @@ import { getSetting, NEXON_FC_KEY, NEXON_MAPLE_KEY } from './settings'
  * 결과는 DB 에 담아두고 화면은 DB 만 본다.
  */
 
-export type NexonGame = 'fconline' | 'maple'
+export type NexonGame = 'fconline' | 'maple' | 'sudden'
 
 export const SYNC_COOLDOWN_MS = 10 * 60 * 1000
 const TIMEOUT_MS = 8000
@@ -30,6 +30,7 @@ export class NexonError extends Error {
 const SLOT: Record<NexonGame, { setting: string; env: string; label: string }> = {
   fconline: { setting: NEXON_FC_KEY, env: 'NEXON_FCONLINE_API_KEY', label: 'FC 온라인' },
   maple: { setting: NEXON_MAPLE_KEY, env: 'NEXON_MAPLE_API_KEY', label: '메이플' },
+  sudden: { setting: NEXON_SA_KEY, env: 'NEXON_SUDDEN_API_KEY', label: '서든어택' },
 }
 
 async function apiKey(game: NexonGame): Promise<string> {
@@ -220,6 +221,45 @@ function han(n: number) {
   return String(n)
 }
 
+// ─────────────────────────── 서든어택 ───────────────────────────
+
+export async function lookupSudden(name: string) {
+  const found = await ask<{ ouid?: string }>(
+    'sudden',
+    `/suddenattack/v1/id?user_name=${encodeURIComponent(name)}`,
+  )
+  return found?.ouid ? { id: found.ouid, name } : null
+}
+
+export async function suddenStats(ouid: string): Promise<GameStats> {
+  const [basic, tier] = await Promise.all([
+    ask<{ user_name?: string; user_level?: number; manner_grade?: string }>(
+      'sudden',
+      `/suddenattack/v1/user/basic?ouid=${ouid}`,
+    ),
+    // 계급이 없을 수도 있다. 없어도 나머지는 보여준다.
+    ask<{ tier_name?: string; tier_grade?: string }>(
+      'sudden',
+      `/suddenattack/v1/user/tier?ouid=${ouid}`,
+    ).catch(() => null),
+  ])
+
+  const level = basic?.user_level ?? 0
+  const rank = tier?.tier_name ?? tier?.tier_grade ?? null
+
+  return {
+    tier: rank ?? (level ? `${level}레벨` : null),
+    detail:
+      [
+        level && rank ? `${level}레벨` : null,
+        basic?.manner_grade ? `매너 ${basic.manner_grade}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || null,
+    stats: level ? { level } : null,
+  }
+}
+
 export async function nexonKeyStatus(game: NexonGame) {
   const slot = SLOT[game]
   const fromEnv = process.env[slot.env]?.trim()
@@ -240,7 +280,9 @@ export async function checkNexonKey(game: NexonGame): Promise<{ ok: boolean; mes
   const path =
     game === 'fconline'
       ? `/fconline/v1/id?nickname=${probe}`
-      : `/maplestory/v1/id?character_name=${probe}`
+      : game === 'sudden'
+        ? `/suddenattack/v1/id?user_name=${probe}`
+        : `/maplestory/v1/id?character_name=${probe}`
   try {
     await ask<unknown>(game, path)
     return { ok: true, message: '넥슨 서버와 정상적으로 통신했습니다.' }

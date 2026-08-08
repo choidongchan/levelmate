@@ -11,9 +11,11 @@ type Status = {
   pubg: KeyState
   fconline: KeyState
   maple: KeyState
+  sudden: KeyState
+  blizzard: KeyState & { hasSecret: boolean }
   test?: { ok: boolean; message: string }
   lookup?: {
-    kind: 'riot' | 'pubg' | 'nexon'
+    kind: 'riot' | 'pubg' | 'nexon' | 'blizzard'
     ok: boolean
     message?: string
     name?: string
@@ -162,9 +164,38 @@ export default function AdminSettingsPage() {
           레벨은 내일 반영됩니다.
         </KeyPanel>
 
+        <KeyPanel
+          title="서든어택 API 키"
+          state={status?.sudden}
+          saveOp="saveSuddenKey"
+          testOp="testSuddenKey"
+          placeholder="test_… 또는 live_…"
+          envName="NEXON_SUDDEN_API_KEY"
+          busy={busy}
+          lastOp={lastOp}
+          send={send}
+          test={status?.test}
+          error={error}
+        >
+          openapi.nexon.com 에 <b className="text-white">서든어택</b>으로 등록한 애플리케이션의
+          키입니다. FC·메이플 키와 또 다릅니다.
+          <br />
+          계급과 레벨을 가져옵니다.
+        </KeyPanel>
+
+        <BlizzardPanel
+          state={status?.blizzard}
+          busy={busy}
+          lastOp={lastOp}
+          send={send}
+          test={status?.test}
+          error={error}
+        />
+
         <RiotLookup busy={busy} send={send} lookup={status?.lookup} />
         <PubgLookup busy={busy} send={send} lookup={status?.lookup} />
         <NexonLookup busy={busy} send={send} lookup={status?.lookup} />
+        <BlizzardLookup busy={busy} send={send} lookup={status?.lookup} />
 
         <Panel title="알아두기">
           <ul className="flex list-disc flex-col gap-2 py-1 pl-4 text-[11px] leading-relaxed text-muted">
@@ -385,6 +416,206 @@ function RiotLookup({
   )
 }
 
+/**
+ * 블리자드만 조각이 둘이다.
+ * 아이디와 비밀키를 받아 하루짜리 출입증을 받아 쓰는 방식이라, 한 칸에 못 담는다.
+ */
+function BlizzardPanel({
+  state,
+  busy,
+  lastOp,
+  send,
+  test,
+  error,
+}: {
+  state: (KeyState & { hasSecret: boolean }) | undefined
+  busy: string | null
+  lastOp: string | null
+  send: Send
+  test?: { ok: boolean; message: string }
+  error: string
+}) {
+  const [id, setId] = useState('')
+  const [secret, setSecret] = useState('')
+  const mine = lastOp?.startsWith('saveBlizzard') || lastOp === 'testBlizzardKey'
+  const fromEnv = state?.source === 'env'
+
+  return (
+    <Panel title="블리자드 배틀넷 API">
+      <div className="flex flex-col gap-3 py-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {state?.set ? (
+            <>
+              <span className="inline-flex items-center gap-1 rounded-full bg-online/15 px-2.5 py-1 text-[11px] font-bold text-online">
+                <Icon name="check" className="size-3" />
+                설정됨
+              </span>
+              <code className="text-xs text-dim">{state.masked}</code>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#fbbf24]/15 px-2.5 py-1 text-[11px] font-bold text-[#fbbf24]">
+              <Icon name="alert" className="size-3" />
+              {state?.hasSecret ? '아이디가 없음' : '아직 없음'}
+            </span>
+          )}
+          {state?.hasSecret && (
+            <span className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-dim">
+              비밀키 있음
+            </span>
+          )}
+          {fromEnv && <span className="text-[11px] text-dim">(서버 .env 값 사용 중)</span>}
+        </div>
+
+        <p className="text-[11px] leading-relaxed text-muted">
+          <b className="text-white">와우</b>(레벨·아이템 레벨·직업)와{' '}
+          <b className="text-white">디아블로 3</b>(파라곤)를 봅니다.
+          community.developer.battle.net → <b className="text-white">Create Client</b> 에서
+          Client ID 와 Client Secret 두 개를 받습니다.
+          <br />
+          <b className="text-white">오버워치는 블리자드가 열지 않아 안 됩니다.</b> 오버워치는 계속
+          직접 적는 티어로 남습니다.
+        </p>
+
+        {!fromEnv && (
+          <>
+            <div className="flex gap-2">
+              <input
+                value={id}
+                onChange={(e) => setId(e.target.value)}
+                placeholder="Client ID"
+                autoComplete="off"
+                spellCheck={false}
+                className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 font-mono text-xs outline-none placeholder:text-dim"
+              />
+              <button
+                type="button"
+                disabled={!id.trim() || busy !== null}
+                onClick={() => void send('saveBlizzardId', id).then(() => setId(''))}
+                className="shrink-0 rounded-xl bg-brand px-4 py-2.5 text-xs font-bold transition hover:bg-brand-bright disabled:opacity-40"
+              >
+                {busy === 'saveBlizzardId' ? '저장 중…' : '저장'}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                value={secret}
+                onChange={(e) => setSecret(e.target.value)}
+                placeholder="Client Secret"
+                type="password"
+                autoComplete="off"
+                spellCheck={false}
+                className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 font-mono text-xs outline-none placeholder:text-dim"
+              />
+              <button
+                type="button"
+                disabled={!secret.trim() || busy !== null}
+                onClick={() => void send('saveBlizzardSecret', secret).then(() => setSecret(''))}
+                className="shrink-0 rounded-xl bg-brand px-4 py-2.5 text-xs font-bold transition hover:bg-brand-bright disabled:opacity-40"
+              >
+                {busy === 'saveBlizzardSecret' ? '저장 중…' : '저장'}
+              </button>
+            </div>
+          </>
+        )}
+
+        {mine && error && <p className="text-[11px] text-[#f43f5e]">{error}</p>}
+
+        {mine && test && (
+          <p
+            className={`flex gap-2 rounded-xl px-3 py-2.5 text-[11px] leading-relaxed ${
+              test.ok ? 'bg-online/10 text-online' : 'bg-[#f43f5e]/10 text-[#f43f5e]'
+            }`}
+          >
+            <Icon name={test.ok ? 'check' : 'alert'} className="mt-0.5 size-3.5 shrink-0" />
+            <span>{test.message}</span>
+          </p>
+        )}
+
+        <button
+          type="button"
+          disabled={!state?.set || busy !== null}
+          onClick={() => void send('testBlizzardKey')}
+          className="flex w-fit items-center gap-1.5 rounded-xl bg-white/8 px-3.5 py-2 text-[11px] font-bold transition hover:bg-white/14 disabled:opacity-40"
+        >
+          <Icon name="refresh" className="size-3.5" />
+          {busy === 'testBlizzardKey' ? '확인 중…' : '연결 확인'}
+        </button>
+      </div>
+    </Panel>
+  )
+}
+
+function BlizzardLookup({
+  busy,
+  send,
+  lookup,
+}: {
+  busy: string | null
+  send: Send
+  lookup: Status['lookup']
+}) {
+  const [value, setValue] = useState('')
+  const [realm, setRealm] = useState('')
+  const mine = busy === 'lookupBlizzard'
+  const shown = lookup?.kind === 'blizzard' ? lookup : undefined
+
+  return (
+    <Panel title="블리자드 계정 조회 시험">
+      <div className="flex flex-col gap-3 py-1">
+        <p className="text-[11px] leading-relaxed text-muted">
+          와우는 <b className="text-white">서버 + 캐릭터명</b>, 디아블로 3 은{' '}
+          <b className="text-white">배틀태그(이름#1234)</b> 를 넣습니다. # 이 있으면 디아블로로
+          봅니다. 저장하지 않습니다.
+        </p>
+
+        <div className="flex gap-2">
+          <input
+            value={realm}
+            onChange={(e) => setRealm(e.target.value)}
+            placeholder="서버 (와우만)"
+            autoComplete="off"
+            className="w-28 shrink-0 rounded-xl bg-white/6 px-3 py-2.5 text-xs outline-none placeholder:text-dim"
+          />
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="캐릭터명 또는 이름#1234"
+            autoComplete="off"
+            spellCheck={false}
+            className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 text-xs outline-none placeholder:text-dim"
+          />
+          <button
+            type="button"
+            disabled={!value.trim() || busy !== null}
+            onClick={() => void send('lookupBlizzard', value, realm)}
+            className="shrink-0 rounded-xl bg-white/8 px-4 py-2.5 text-xs font-bold transition hover:bg-white/14 disabled:opacity-40"
+          >
+            {mine ? '조회 중…' : '조회'}
+          </button>
+        </div>
+
+        {shown &&
+          (shown.ok ? (
+            <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-white/5 px-3.5 py-3 text-[11px]">
+              <dt className="text-dim">계정</dt>
+              <dd className="font-bold">{shown.name}</dd>
+              <dt className="text-dim">등급</dt>
+              <dd className="font-bold">{shown.tier}</dd>
+              <dt className="text-dim">한 줄 요약</dt>
+              <dd>{shown.record}</dd>
+              <dt className="text-dim">원본 값</dt>
+              <dd className="font-mono break-all">{shown.kda}</dd>
+            </dl>
+          ) : (
+            <p className="rounded-xl bg-[#f43f5e]/10 px-3.5 py-2.5 text-[11px] text-[#f43f5e]">
+              {shown.message}
+            </p>
+          ))}
+      </div>
+    </Panel>
+  )
+}
+
 function NexonLookup({
   busy,
   send,
@@ -404,7 +635,8 @@ function NexonLookup({
       <div className="flex flex-col gap-3 py-1">
         <p className="text-[11px] leading-relaxed text-muted">
           FC 온라인은 <b className="text-white">감독명</b>, 메이플은{' '}
-          <b className="text-white">캐릭터명</b>을 넣습니다. 저장하지 않습니다.
+          <b className="text-white">캐릭터명</b>, 서든어택은{' '}
+          <b className="text-white">닉네임</b>을 넣습니다. 저장하지 않습니다.
         </p>
 
         <div className="flex gap-2">
@@ -419,11 +651,16 @@ function NexonLookup({
             <option value="maple" className="bg-[#14141d]">
               메이플
             </option>
+            <option value="sudden" className="bg-[#14141d]">
+              서든어택
+            </option>
           </select>
           <input
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            placeholder={game === 'maple' ? '캐릭터명' : '감독명'}
+            placeholder={
+              game === 'maple' ? '캐릭터명' : game === 'sudden' ? '닉네임' : '감독명'
+            }
             autoComplete="off"
             spellCheck={false}
             className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 text-xs outline-none placeholder:text-dim"

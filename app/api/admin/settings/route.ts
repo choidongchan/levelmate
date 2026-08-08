@@ -1,5 +1,14 @@
 import { readViewer } from '@/lib/server/auth'
 import {
+  blizzardKeyStatus,
+  BlizzardError,
+  checkBlizzardKey,
+  d3Stats,
+  lookupD3,
+  lookupWow,
+  wowStats,
+} from '@/lib/server/blizzard'
+import {
   checkKey,
   getRecentStats,
   getSoloRank,
@@ -22,14 +31,19 @@ import {
   fconlineStats,
   lookupFconline,
   lookupMaple,
+  lookupSudden,
   mapleStats,
   nexonKeyStatus,
   NexonError,
+  suddenStats,
 } from '@/lib/server/nexon'
 import {
+  BLIZZARD_ID,
+  BLIZZARD_SECRET,
   maskSecret,
   NEXON_FC_KEY,
   NEXON_MAPLE_KEY,
+  NEXON_SA_KEY,
   PUBG_KEY,
   RIOT_KEY,
   setSetting,
@@ -77,18 +91,28 @@ const NO_STORE = { 'Cache-Control': 'private, no-store' }
  * .env 로 넣은 값이 있으면 그쪽이 우선이고, 화면에서는 바꿀 수 없다고 알린다.
  */
 async function state() {
-  const [riot, pubg, fc, maple] = await Promise.all([
+  const [riot, pubg, fc, maple, sa, bliz] = await Promise.all([
     keyStatus(),
     pubgKeyStatus(),
     nexonKeyStatus('fconline'),
     nexonKeyStatus('maple'),
+    nexonKeyStatus('sudden'),
+    blizzardKeyStatus(),
   ])
   const slot = (k: { set: boolean; source: 'env' | 'db' | null; value: string | null }) => ({
     set: k.set,
     source: k.source,
     masked: maskSecret(k.value),
   })
-  return { riot: slot(riot), pubg: slot(pubg), fconline: slot(fc), maple: slot(maple) }
+  return {
+    riot: slot(riot),
+    pubg: slot(pubg),
+    fconline: slot(fc),
+    maple: slot(maple),
+    sudden: slot(sa),
+    // 블리자드만 두 조각이라 비밀키가 들어있는지도 같이 알린다
+    blizzard: { ...slot(bliz), hasSecret: bliz.hasSecret },
+  }
 }
 
 export async function GET() {
@@ -147,8 +171,10 @@ export async function POST(req: Request) {
       }
       // 넥슨은 게임마다 애플리케이션이 달라 키도 따로 받는다.
       case 'saveFconlineKey':
-      case 'saveMapleKey': {
-        const maple = op === 'saveMapleKey'
+      case 'saveMapleKey':
+      case 'saveSuddenKey': {
+        const which =
+          op === 'saveMapleKey' ? 'maple' : op === 'saveSuddenKey' ? 'sudden' : 'fconline'
         const value = String(body.value ?? '').trim()
         // 넥슨 키는 test_ 또는 live_ 로 시작하는 긴 문자열이다.
         if (value && !/^(test|live)_[A-Za-z0-9]{16,}$/.test(value)) {
@@ -157,12 +183,74 @@ export async function POST(req: Request) {
             { status: 400 },
           )
         }
-        await setSetting(maple ? NEXON_MAPLE_KEY : NEXON_FC_KEY, value || null)
-        const test = value
-          ? await checkNexonKey(maple ? 'maple' : 'fconline')
-          : { ok: false, message: '키를 지웠습니다.' }
+        const slotKey =
+          which === 'maple' ? NEXON_MAPLE_KEY : which === 'sudden' ? NEXON_SA_KEY : NEXON_FC_KEY
+        await setSetting(slotKey, value || null)
+        const test = value ? await checkNexonKey(which) : { ok: false, message: '키를 지웠습니다.' }
         return Response.json({ ...(await state()), test }, { headers: NO_STORE })
       }
+      // 블리자드는 아이디와 비밀키를 따로 저장한다.
+      case 'saveBlizzardId':
+      case 'saveBlizzardSecret': {
+        const value = String(body.value ?? '').trim()
+        if (value && !/^[A-Za-z0-9]{16,64}$/.test(value)) {
+          return Response.json(
+            { error: '형태가 아닙니다. develop.battle.net 에서 받은 값을 그대로 넣어주세요.' },
+            { status: 400 },
+          )
+        }
+        await setSetting(op === 'saveBlizzardId' ? BLIZZARD_ID : BLIZZARD_SECRET, value || null)
+        const now = await blizzardKeyStatus()
+        // 둘 다 있어야 확인할 수 있다. 하나만 넣은 상태에서는 조용히 넘어간다.
+        const test = now.set
+          ? await checkBlizzardKey()
+          : { ok: false, message: '아이디와 비밀키를 둘 다 넣어야 확인할 수 있습니다.' }
+        return Response.json({ ...(await state()), test }, { headers: NO_STORE })
+      }
+      case 'testBlizzardKey':
+        return Response.json(
+          { ...(await state()), test: await checkBlizzardKey() },
+          { headers: NO_STORE },
+        )
+
+      // 와우·디아3 도 저장 없이 조회만 해본다.
+      case 'lookupBlizzard': {
+        const raw = String(body.value ?? '').trim()
+        const realm = String(body.platform ?? '').trim()
+        const d3 = raw.includes('#') || raw.includes('-')
+        if (!raw) return Response.json({ error: '닉네임을 넣어주세요' }, { status: 400 })
+
+        const player = d3 ? await lookupD3(raw) : await lookupWow(raw, realm)
+        if (!player) {
+          return Response.json(
+            {
+              lookup: {
+                kind: 'blizzard',
+                ok: false,
+                message: d3
+                  ? '그런 배틀태그를 찾지 못했습니다.'
+                  : '그런 와우 캐릭터를 찾지 못했습니다. 서버 이름을 확인해주세요.',
+              },
+            },
+            { headers: NO_STORE },
+          )
+        }
+        const found = d3 ? await d3Stats(player.id) : await wowStats(player.id, player.name)
+        return Response.json(
+          {
+            lookup: {
+              kind: 'blizzard',
+              ok: true,
+              name: player.name,
+              tier: found.tier ?? '등급 없음',
+              record: found.detail ?? '기록 없음',
+              kda: found.stats ? JSON.stringify(found.stats) : '없음',
+            },
+          },
+          { headers: NO_STORE },
+        )
+      }
+
       case 'testFconlineKey':
         return Response.json(
           { ...(await state()), test: await checkNexonKey('fconline') },
@@ -173,29 +261,38 @@ export async function POST(req: Request) {
           { ...(await state()), test: await checkNexonKey('maple') },
           { headers: NO_STORE },
         )
+      case 'testSuddenKey':
+        return Response.json(
+          { ...(await state()), test: await checkNexonKey('sudden') },
+          { headers: NO_STORE },
+        )
 
       // 넥슨 두 게임도 저장 없이 조회만 해본다.
       case 'lookupNexon': {
         const raw = String(body.value ?? '').trim()
-        const maple = String(body.platform ?? '') === 'maple'
+        const which = String(body.platform ?? 'fconline')
         if (!raw) return Response.json({ error: '닉네임을 넣어주세요' }, { status: 400 })
 
-        const player = maple ? await lookupMaple(raw) : await lookupFconline(raw)
+        const player =
+          which === 'maple'
+            ? await lookupMaple(raw)
+            : which === 'sudden'
+              ? await lookupSudden(raw)
+              : await lookupFconline(raw)
         if (!player) {
+          const what =
+            which === 'maple' ? '메이플 캐릭터' : which === 'sudden' ? '서든어택 계정' : 'FC 온라인 구단'
           return Response.json(
-            {
-              lookup: {
-                kind: 'nexon',
-                ok: false,
-                message: maple
-                  ? '그런 메이플 캐릭터를 찾지 못했습니다.'
-                  : '그런 FC 온라인 구단을 찾지 못했습니다.',
-              },
-            },
+            { lookup: { kind: 'nexon', ok: false, message: `그런 ${what}을 찾지 못했습니다.` } },
             { headers: NO_STORE },
           )
         }
-        const found = maple ? await mapleStats(player.id) : await fconlineStats(player.id)
+        const found =
+          which === 'maple'
+            ? await mapleStats(player.id)
+            : which === 'sudden'
+              ? await suddenStats(player.id)
+              : await fconlineStats(player.id)
         return Response.json(
           {
             lookup: {
@@ -265,6 +362,10 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     // 관리자만 보는 화면이라, 넥슨이 실제로 뭐라고 했는지까지 그대로 넘긴다.
+    if (err instanceof BlizzardError) {
+      const error = err.detail ? `${err.message} (${err.detail})` : err.message
+      return Response.json({ error }, { status: 400 })
+    }
     if (err instanceof NexonError) {
       const error = err.detail ? `${err.message} (${err.detail})` : err.message
       return Response.json({ error }, { status: 400 })

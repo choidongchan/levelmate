@@ -23,6 +23,7 @@ export function MateRow({
   listing,
   index = 0,
   href,
+  view = 'grid',
 }: {
   user: User
   /** 아직 글이 없는 회원이면 null */
@@ -30,32 +31,43 @@ export function MateRow({
   index?: number
   /** 기본은 메이트 프로필. 검색처럼 글이 주인공인 곳에서는 글로 보낸다 */
   href?: string
+  /**
+   * 바둑판(사진이 큰 카드) 또는 목록(한 줄에 하나).
+   * 사진을 보고 고르는 사람과 조건을 훑는 사람이 다르다.
+   */
+  view?: 'grid' | 'list'
 }) {
   const rating = ratingAvg(user)
   const games = gameProfiles(user)
   // 글이 있으면 그 글의 게임을 앞세운다. 이 카드를 누른 이유가 그 게임이기 때문이다.
   const lead = listing ? (games.find((g) => g.game === listing.mainGame) ?? null) : (games[0] ?? null)
   const rest = games.filter((g) => g !== lead)
+  // 바둑판은 어느 화면에서나 사진이 큰 세로 카드, 목록은 어느 화면에서나
+  // 가로 한 줄. 화면 크기가 아니라 고른 보기 방식이 모양을 정한다.
+  const card = view === 'grid'
+  const md = (classes: string) => (card ? classes : '')
 
   return (
     <Link
       href={listing ? (href ?? `/users/${user.id}`) : `/users/${user.id}`}
-      className="rise flex items-stretch gap-3 overflow-hidden rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99] md:flex-col md:gap-0 md:p-0"
+      className={`rise flex overflow-hidden rounded-2xl bg-surface transition hover:bg-surface-2 active:scale-[0.99] ${
+        card ? 'flex-col' : 'items-stretch gap-3 p-2.5'
+      }`}
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
       <UserArt
         user={user}
-        className="aspect-[3/4] w-[4.75rem] shrink-0 rounded-xl md:w-full md:rounded-none"
-        sizes="(max-width: 768px) 80px, 260px"
+        className={`aspect-[3/4] shrink-0 ${card ? 'w-full' : 'w-[4.75rem] rounded-xl'}`}
+        sizes={card ? '(max-width: 768px) 45vw, 260px' : '80px'}
         priority={index < 5}
       />
 
       {/* PC 는 한 줄에 여러 장이 들어가므로 글자를 조금 줄여 사진과 균형을 맞춘다 */}
-      <div className="flex min-w-0 flex-1 flex-col justify-center md:flex-none md:px-3 md:pt-2.5">
+      <div className={`flex min-w-0 flex-1 flex-col justify-center ${md('flex-none px-3 pt-2.5')}`}>
         <div className="flex items-center gap-1.5">
-          <span className="truncate font-semibold md:text-sm">{user.nickname}</span>
+          <span className={`truncate font-semibold ${md('text-sm')}`}>{user.nickname}</span>
           {user.verified && <Icon name="shield" className="size-3 shrink-0 text-online" />}
-          <span className="ml-auto flex shrink-0 items-center gap-1 text-[11px] md:text-[10px]">
+          <span className={`ml-auto flex shrink-0 items-center gap-1 text-[11px] ${md('text-[10px]')}`}>
             <span className="online-dot size-1.5 rounded-full bg-online" />
             <span className="text-online">온라인</span>
           </span>
@@ -65,7 +77,7 @@ export function MateRow({
         {lead ? (
           <>
             <p
-              className="mt-1 truncate text-sm leading-tight font-black md:text-[13px]"
+              className={`mt-1 truncate text-sm leading-tight font-black ${md('text-[13px]')}`}
               style={{ color: lead.tierColor }}
             >
               <span
@@ -90,7 +102,7 @@ export function MateRow({
             )}
           </>
         ) : (
-          <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
+          <p className={`mt-0.5 truncate text-xs text-muted ${md('text-[11px]')}`}>
             {listing ? (
               <>
                 {GAMES[listing.mainGame].short} · {listing.tier}
@@ -113,13 +125,13 @@ export function MateRow({
           </span>
         )}
 
-        <p className="mt-1 truncate text-xs text-dim md:text-[11px]">
+        <p className={`mt-1 truncate text-xs text-dim ${md('text-[11px]')}`}>
           {listing ? listing.title : user.intro || '아직 올린 글이 없어요'}
         </p>
       </div>
 
-      <div className="flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 md:flex-row md:items-center md:justify-between md:gap-1 md:px-3 md:pt-1.5 md:pb-3">
-        <span className="inline-flex items-center gap-1 text-xs md:text-[11px]">
+      <div className={`flex shrink-0 flex-col items-end justify-center gap-1.5 pr-1 ${md('flex-row items-center justify-between gap-1 px-3 pt-1.5 pb-3')}`}>
+        <span className={`inline-flex items-center gap-1 text-xs ${md('text-[11px]')}`}>
           <Icon name="star" className="size-3.5 text-star" />
           <span className="font-semibold tabular-nums">{rating?.toFixed(1) ?? '신규'}</span>
           {user.reviewCount > 0 && (
@@ -128,7 +140,7 @@ export function MateRow({
         </span>
 
         {listing ? (
-          <span className="text-sm font-bold text-brand-bright md:text-[13px]">
+          <span className={`text-sm font-bold text-brand-bright ${md('text-[13px]')}`}>
             {listing.pricePerHour === 0 ? (
               <span className="text-online">무료</span>
             ) : (
@@ -142,7 +154,7 @@ export function MateRow({
           <span className="text-[11px] font-medium text-dim">프로필 보기</span>
         )}
 
-        <div className="flex gap-1 md:hidden">
+        <div className={`flex gap-1 ${card ? 'hidden' : ''}`}>
           {(listing?.games ?? []).slice(0, 3).map((g) => (
             <GameBadge key={g} game={g} />
           ))}

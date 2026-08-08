@@ -17,12 +17,21 @@ const HINT: Partial<Record<GameKey, string>> = {
   pubg: '게임 안에서 쓰는 닉네임 그대로 넣어주세요. 대문자·소문자를 가립니다.',
   fconline: 'FC 온라인 구단의 감독명을 넣어주세요.',
   maple: '메이플 캐릭터명을 넣어주세요. 본캐로 넣으시면 됩니다.',
+  sudden: '서든어택 닉네임을 넣어주세요.',
+  wow: '서버는 "하이잘" 처럼 한글로 적으시면 됩니다.',
+  d3: '배틀태그를 이름#1234 형태로 넣어주세요.',
 }
+
+/** 서버처럼 목록으로 못 주고 직접 적어야 하는 값이 있는 게임 */
+const FREE_PLATFORM: Partial<Record<GameKey, string>> = { wow: '서버' }
 
 /** 무엇을 넣어야 하는지 게임마다 다르다 */
 const NAME_LABEL: Partial<Record<GameKey, string>> = {
   fconline: '감독명',
   maple: '캐릭터명',
+  sudden: '닉네임',
+  wow: '캐릭터명',
+  d3: '이름#1234',
 }
 
 /**
@@ -34,6 +43,7 @@ const NAME_LABEL: Partial<Record<GameKey, string>> = {
 export function GameLink({ me, game }: { me: User; game: GameKey }) {
   const linked = me.gameAccounts?.find((g) => g.game === game) ?? null
   const platforms = PLATFORMS[game] ?? []
+  const freeLabel = FREE_PLATFORM[game]
   const [name, setName] = useState('')
   const [platform, setPlatform] = useState(platforms[0]?.key ?? '')
   const [busy, setBusy] = useState<'link' | 'sync' | 'unlink' | null>(null)
@@ -59,6 +69,15 @@ export function GameLink({ me, game }: { me: User; game: GameKey }) {
         </p>
 
         <div className="mt-4 flex gap-2">
+          {freeLabel && (
+            <input
+              value={platform}
+              onChange={(e) => setPlatform(e.target.value)}
+              placeholder={freeLabel}
+              maxLength={20}
+              className="w-24 shrink-0 rounded-2xl bg-white/6 px-3 py-3 text-sm outline-none placeholder:text-dim"
+            />
+          )}
           {platforms.length > 0 && (
             <select
               value={platform}
@@ -86,7 +105,7 @@ export function GameLink({ me, game }: { me: User; game: GameKey }) {
 
         <button
           type="button"
-          disabled={!name.trim() || busy !== null}
+          disabled={!name.trim() || (Boolean(freeLabel) && !platform.trim()) || busy !== null}
           onClick={() => run('link', () => linkGame(game, name, platform || undefined))}
           className="cta mt-3 w-full rounded-full py-3 text-sm font-black disabled:opacity-40"
         >
@@ -98,7 +117,10 @@ export function GameLink({ me, game }: { me: User; game: GameKey }) {
     )
   }
 
-  const platformLabel = platforms.find((p) => p.key === linked.platform)?.label
+  // 목록에서 고른 게임은 사람이 읽는 이름으로, 직접 적은 게임은 적은 그대로 보여준다
+  const platformLabel = freeLabel
+    ? null
+    : platforms.find((p) => p.key === linked.platform)?.label
 
   return (
     <section className="glass rounded-3xl p-5">
@@ -175,6 +197,10 @@ function GameStats({ stats }: { stats: Record<string, number | string> }) {
   if (typeof stats.power === 'number' && stats.power)
     rows.push(['전투력', stats.power.toLocaleString('ko-KR')])
   if (typeof stats.world === 'string' && stats.world) rows.push(['월드', stats.world])
+  if (typeof stats.itemLevel === 'number' && stats.itemLevel)
+    rows.push(['아이템 레벨', `${stats.itemLevel}`])
+  if (typeof stats.paragon === 'number' && stats.paragon)
+    rows.push(['파라곤', stats.paragon.toLocaleString('ko-KR')])
   if (rows.length === 0) return null
 
   return (

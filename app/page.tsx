@@ -8,6 +8,7 @@ import { InstallHint } from '@/components/install-hint'
 import { Logo } from '@/components/logo'
 import { MateRow } from '@/components/mate-row'
 import { UserArt } from '@/components/user-art'
+import { useView, ViewToggle } from '@/components/view-toggle'
 import { trustScore } from '@/lib/game-profile'
 import { currentUser, logout, useStore } from '@/lib/store'
 import {
@@ -270,10 +271,11 @@ function Recommended({
   onKind,
 }: {
   /** listing 이 null 이면 아직 글이 없는 회원 */
-  mates: { user: import('@/lib/types').User; listing: Listing | null }[]
+  mates: { user: User; listing: Listing | null }[]
   kind: ListingKind | 'ALL'
   onKind: (k: ListingKind | 'ALL') => void
 }) {
+  const [view, setView] = useView()
   return (
     <section>
       <SectionTitle
@@ -296,16 +298,23 @@ function Recommended({
             {LISTING_KINDS[k].label}
           </Chip>
         ))}
+        <ViewToggle value={view} onChange={setView} />
       </div>
 
       {mates.length === 0 ? (
         <p className="py-10 text-center text-sm text-dim">조건에 맞는 메이트가 없어요</p>
-      ) : (
+      ) : view === 'grid' ? (
         // 사진이 너무 커 보이지 않게 화면이 넓어질수록 한 줄에 더 넣는다.
         // 모바일은 가로형 한 줄짜리라 그대로 세로로 쌓는다.
-        <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {mates.map(({ user, listing }, i) => (
             <MateRow key={user.id} user={user} listing={listing} index={i} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {mates.map(({ user, listing }, i) => (
+            <MateRow key={user.id} user={user} listing={listing} index={i} view="list" />
           ))}
         </div>
       )}

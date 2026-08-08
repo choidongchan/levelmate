@@ -17,6 +17,13 @@ export const PUBG_KEY = 'pubg_api_key'
  */
 export const NEXON_FC_KEY = 'nexon_fconline_api_key'
 export const NEXON_MAPLE_KEY = 'nexon_maple_api_key'
+export const NEXON_SA_KEY = 'nexon_sudden_api_key'
+/**
+ * 블리자드는 키 한 줄이 아니라 아이디와 비밀키 두 개를 받는다.
+ * 그 둘로 하루짜리 출입증을 받아 쓰는 방식이다.
+ */
+export const BLIZZARD_ID = 'blizzard_client_id'
+export const BLIZZARD_SECRET = 'blizzard_client_secret'
 /** 마지막 호출이 성공했는지. 키가 만료되면 여기가 먼저 0 이 된다. */
 export const RIOT_KEY_OK = 'riot_api_key_ok'
 export const RIOT_KEY_CHECKED = 'riot_api_key_checked_at'
