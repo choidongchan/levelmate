@@ -4,6 +4,7 @@ import { Icon } from './icon'
 import { ChampionList, RoleTag, TierBadge, WinRateBar } from './riot-badges'
 import { UserArt } from './user-art'
 import { won } from '@/lib/format'
+import { roleShort } from '@/lib/games'
 import { ratingAvg } from '@/lib/promise-score'
 import { GAMES, type Listing, type User } from '@/lib/types'
 
@@ -65,7 +66,18 @@ export function MateRow({
           </span>
         ) : (
           <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
-            {listing ? `${GAMES[listing.mainGame].short} · ${listing.tier}` : user.region}
+            {listing ? (
+              <>
+                {GAMES[listing.mainGame].short} · {listing.tier}
+                {roleShort(listing.mainGame, listing.myRole) && (
+                  <span className="ml-1 rounded bg-white/8 px-1 py-0.5 text-[10px] text-dim">
+                    {roleShort(listing.mainGame, listing.myRole)}
+                  </span>
+                )}
+              </>
+            ) : (
+              user.region
+            )}
           </p>
         )}
 

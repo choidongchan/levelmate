@@ -90,10 +90,10 @@ export type Listing = {
   mainGame: GameKey
   games: GameKey[]
   tier: string
-  /** 내가 주로 서는 자리 (LOL) */
-  myRole: LolRole | null
+  /** 내가 주로 서는 자리. 게임마다 다르다 (lib/games.ts) */
+  myRole: string | null
   /** 이 글에서 찾는 자리 */
-  wantRoles: LolRole[]
+  wantRoles: string[]
   /** 0이면 무료 */
   pricePerHour: number
   region: string

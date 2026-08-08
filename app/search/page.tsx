@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react'
 import { Icon } from '@/components/icon'
 import { MateRow } from '@/components/mate-row'
 import { ScreenHeader } from '@/components/screen-header'
-import { LOL_ROLE_KEYS, LOL_ROLES, type LolRole } from '@/lib/riot'
+import { rolesFor } from '@/lib/games'
 import { useStore } from '@/lib/store'
 import {
   GAMES,
@@ -22,8 +22,11 @@ export default function SearchPage() {
   const [game, setGame] = useState<GameKey | 'ALL'>('ALL')
   const [mode, setMode] = useState<MeetMode | 'ALL'>('ALL')
   const [region, setRegion] = useState('전체 지역')
-  const [role, setRole] = useState<LolRole | 'ALL'>('ALL')
+  const [role, setRole] = useState<string>('ALL')
   const [freeOnly, setFreeOnly] = useState(false)
+
+  // 게임을 바꾸면 그 게임의 자리 목록으로 바뀐다
+  const gameRoles = game === 'ALL' ? null : rolesFor(game)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -100,15 +103,20 @@ export default function SearchPage() {
           ))}
         </div>
 
-        {/* 롤은 자리가 맞아야 의미가 있다. 상대가 주로 서는 자리로 거른다. */}
-        {(game === 'ALL' || game === 'lol') && (
+        {/* 자리가 있는 게임을 고르면 그 게임의 자리로 거른다.
+            게임마다 자리 이름이 달라서, 게임을 안 고르면 띄우지 않는다. */}
+        {gameRoles && (
           <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
             <Chip active={role === 'ALL'} onClick={() => setRole('ALL')}>
               전체 포지션
             </Chip>
-            {LOL_ROLE_KEYS.map((r) => (
-              <Chip key={r} active={role === r} onClick={() => setRole(role === r ? 'ALL' : r)}>
-                {LOL_ROLES[r].label}
+            {gameRoles.map((r) => (
+              <Chip
+                key={r.key}
+                active={role === r.key}
+                onClick={() => setRole(role === r.key ? 'ALL' : r.key)}
+              >
+                {r.label}
               </Chip>
             ))}
           </div>

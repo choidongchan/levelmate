@@ -1,4 +1,5 @@
 import { db } from '../db'
+import { ALL_ROLE_KEYS } from '../games'
 import { FEE_RATE } from '../types'
 import { adminExpiry, hashPassword, newToken, type Viewer } from './auth'
 
@@ -55,12 +56,13 @@ const BOOKING_STATES = [
 ] as const
 const PHOTO_STATES = ['NONE', 'PENDING', 'APPROVED', 'REJECTED'] as const
 const PLAN_TARGETS = ['MEMBER', 'MATE', 'PCBANG'] as const
-const ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
+/** 게임마다 자리 이름이 다르다. 어느 게임의 것이든 받되, 아는 값만 받는다. */
+const ROLES = ALL_ROLE_KEYS as readonly string[]
 
 /** 포지션 목록. 빈 값이면 '상관없음' 으로 본다. */
 function roles(v: unknown): string[] {
   if (!Array.isArray(v)) return []
-  return [...new Set(v.map((r) => pick(r, ROLES, '포지션')))]
+  return [...new Set(v.map((r) => pick(r, ROLES, '포지션')))].slice(0, 5)
 }
 
 /** 시간표는 "13:00" 같은 형태만 받는다 */
