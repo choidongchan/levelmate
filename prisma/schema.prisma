@@ -319,6 +319,16 @@ model Photo {
   createdAt DateTime @default(now())
 }
 
+/// 운영자가 관리자 화면에서 넣는 설정값.
+///
+/// 서버 파일(.env)을 직접 고치지 않고도 바꿀 수 있게 여기에 둔다.
+/// 값이 비밀일 수 있으므로 화면으로는 절대 원문을 내보내지 않는다.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 /// 관리자 계정. 이용자와 완전히 분리된 로그인이다.
 model AdminAccount {
   id       String @id

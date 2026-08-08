@@ -30,6 +30,8 @@ export type State = {
   loaded: boolean
   /** 서버가 지금 돌리고 있는 빌드. 이게 바뀌면 화면이 낡은 것이다. */
   build: string
+  /** 관리자에게만. 라이엇 키가 살아 있는지 — 조용히 죽는 것을 막으려고 본다. */
+  riotKey: 'ok' | 'bad' | 'none' | null
 }
 
 /**
@@ -49,4 +51,5 @@ export const EMPTY_STATE: State = {
   adminSessionId: null,
   loaded: false,
   build: '',
+  riotKey: null,
 }

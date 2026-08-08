@@ -2,6 +2,8 @@ import { db } from '../db'
 import { EMPTY_STATE, type State } from '../state'
 import { readViewer, type Viewer } from './auth'
 import { buildId } from './build'
+import { keyStatus } from './riot'
+import { getSetting, RIOT_KEY_OK } from './settings'
 import {
   toAdmin,
   toBooking,
@@ -75,7 +77,15 @@ export async function buildSnapshot(viewer?: Viewer): Promise<State> {
     adminSessionId: adminId,
     loaded: true,
     build: await buildId(),
+    riotKey: isAdmin ? await riotKeyState() : null,
   }
+}
+
+/** 키가 죽었는지. 관리자 메뉴에 빨간 표시를 띄우려고 본다. */
+async function riotKeyState(): Promise<'ok' | 'bad' | 'none'> {
+  const { set } = await keyStatus()
+  if (!set) return 'none'
+  return (await getSetting(RIOT_KEY_OK)) === '0' ? 'bad' : 'ok'
 }
 
 /**

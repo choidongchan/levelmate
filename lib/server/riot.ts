@@ -1,4 +1,5 @@
 import { toRole, type LolRole } from '../riot'
+import { getSetting, markRiotKey, RIOT_KEY } from './settings'
 
 /**
  * 라이엇 게임즈 API.
@@ -33,12 +34,45 @@ function routes(platform: string) {
   return PLATFORMS[platform] ?? PLATFORMS[DEFAULT_PLATFORM]
 }
 
-function apiKey() {
-  const key = process.env.RIOT_API_KEY
-  if (!key) {
-    throw new RiotError('라이엇 연동이 아직 준비되지 않았습니다. 잠시 뒤 다시 시도해주세요.')
+/**
+ * 키는 두 곳에서 찾는다.
+ *  1) 서버 환경변수 (.env)
+ *  2) 관리자 화면에서 넣은 값 (DB)
+ * 서버에 들어가지 않고도 바꿀 수 있게 두 번째를 열어뒀다.
+ */
+export async function apiKey(): Promise<string> {
+  const fromEnv = process.env.RIOT_API_KEY?.trim()
+  if (fromEnv) return fromEnv
+
+  const fromDb = await getSetting(RIOT_KEY)
+  if (fromDb) return fromDb
+
+  throw new RiotError(
+    '라이엇 연동이 아직 준비되지 않았습니다. 관리자에게 알려주세요.',
+  )
+}
+
+/** 키가 있는지, 어디서 왔는지 */
+export async function keyStatus() {
+  const fromEnv = process.env.RIOT_API_KEY?.trim()
+  if (fromEnv) return { set: true, source: 'env' as const, value: fromEnv }
+  const fromDb = await getSetting(RIOT_KEY)
+  if (fromDb) return { set: true, source: 'db' as const, value: fromDb }
+  return { set: false, source: null, value: null }
+}
+
+/** 키가 실제로 먹히는지 가볍게 확인한다 */
+export async function checkKey(): Promise<{ ok: boolean; message: string }> {
+  try {
+    await ask<unknown>('kr', '/lol/status/v4/platform-data')
+    markRiotKey(true)
+    return { ok: true, message: '라이엇 서버와 정상적으로 통신했습니다.' }
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof RiotError ? err.message : '확인하지 못했습니다.',
+    }
   }
-  return key
 }
 
 /**
@@ -58,7 +92,7 @@ async function ask<T>(host: string, path: string): Promise<T | null> {
   let res: Response
   try {
     res = await fetch(endpoint(host, path), {
-      headers: { 'X-Riot-Token': apiKey() },
+      headers: { 'X-Riot-Token': await apiKey() },
       signal: controller.signal,
       cache: 'no-store',
     })
@@ -71,8 +105,12 @@ async function ask<T>(host: string, path: string): Promise<T | null> {
 
   if (res.status === 404) return null
   if (res.status === 401 || res.status === 403) {
+    // 관리자 화면에 빨간 표시가 뜨게 남겨둔다. 조용히 죽는 것이 제일 나쁘다.
+    markRiotKey(false)
     console.error('[riot] 키가 만료되었거나 권한이 없습니다', res.status, path)
-    throw new RiotError('라이엇 연동이 잠시 멈춰 있습니다. 운영자에게 알려주세요.')
+    throw new RiotError(
+      '라이엇 키가 만료되었거나 잘못되었습니다. 관리자 화면에서 새 키로 바꿔주세요.',
+    )
   }
   if (res.status === 429) {
     throw new RiotError('요청이 몰리고 있습니다. 1분 뒤에 다시 시도해주세요.')
@@ -290,4 +328,3 @@ export function newVerifyCode() {
   return out
 }
 
-export const RIOT_READY = () => Boolean(process.env.RIOT_API_KEY)

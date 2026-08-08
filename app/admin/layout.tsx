@@ -16,6 +16,7 @@ const NAV: { href: string; label: string; icon: IconName }[] = [
   { href: '/admin/plans', label: '요금제', icon: 'trophy' },
   { href: '/admin/stats', label: '통계', icon: 'grid' },
   { href: '/admin/accounts', label: '관리자 계정', icon: 'shield' },
+  { href: '/admin/settings', label: '설정', icon: 'bolt' },
 ]
 
 /**
@@ -32,6 +33,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const badges: Record<string, number> = {
     '/admin/photos': state.users.filter((u) => u.photoStatus === 'PENDING').length,
   }
+  // 라이엇 키가 죽으면 조용히 안 되는 게 아니라 눈에 띄어야 한다
+  const keyBroken = state.riotKey === 'bad'
 
   // 로그인 화면은 콘솔 껍데기 없이 그대로 보여준다
   if (pathname === '/admin/login') return <>{children}</>
@@ -78,6 +81,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 {badges[item.href] > 0 && (
                   <span className="ml-auto grid min-w-5 place-items-center rounded-full bg-brand px-1.5 py-0.5 text-[10px] font-black text-white">
                     {badges[item.href]}
+                  </span>
+                )}
+                {item.href === '/admin/settings' && keyBroken && (
+                  <span className="ml-auto grid size-5 place-items-center rounded-full bg-[#f43f5e] text-[10px] font-black text-white">
+                    !
                   </span>
                 )}
               </Link>
