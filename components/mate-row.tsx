@@ -25,7 +25,8 @@ export function MateRow({
   href?: string
 }) {
   const rating = ratingAvg(user)
-  const showRiot = listing.mainGame === 'lol' && Boolean(user.riot?.tier)
+  // 언랭이어도 연결했으면 보여준다. 주 포지션과 자주 하는 챔피언만으로도 고를 거리가 된다.
+  const showRiot = listing.mainGame === 'lol' && Boolean(user.riot)
 
   return (
     <Link
