@@ -16,6 +16,7 @@ import {
   PRODUCTS,
   REGIONS,
   SAFETY_ITEMS,
+  type Listing,
   type ListingKind,
 } from '@/lib/types'
 
@@ -27,10 +28,16 @@ export default function HomePage() {
   const [regionOpen, setRegionOpen] = useState(false)
   const [kind, setKind] = useState<ListingKind | 'ALL'>('ALL')
 
-  /** 시안의 '추천 메이트' — 활성 글을 가진 사람들을 대표 글 기준으로 보여준다 */
+  /**
+   * 추천 메이트.
+   *
+   * 글을 올린 사람이 먼저 나오고, 그 뒤에 아직 글이 없는 회원도 이어서 보여준다.
+   * 가입만 하고 글을 안 쓴 사람이 아무 데도 안 보이면 서비스가 텅 비어 보인다.
+   */
   const mates = useMemo(() => {
     const seen = new Set<string>()
-    return state.listings
+
+    const withListing = state.listings
       .filter((l) => l.active)
       .filter((l) => (kind === 'ALL' ? true : l.kind === kind))
       .filter((l) => (region === '전체 지역' ? true : l.region === region))
@@ -39,8 +46,20 @@ export default function HomePage() {
         if (seen.has(l.userId)) return []
         seen.add(l.userId)
         const user = state.users.find((u) => u.id === l.userId)
-        return user ? [{ user, listing: l }] : []
+        return user ? [{ user, listing: l as Listing | null }] : []
       })
+
+    // 유형(알려드려요·알려주세요·같이해요)은 글에만 있는 것이라, 유형을 고른
+    // 상태에서는 글 없는 사람을 끼워 넣지 않는다.
+    if (kind !== 'ALL') return withListing
+
+    const withoutListing = state.users
+      .filter((u) => !seen.has(u.id) && !u.bannedAt)
+      .filter((u) => (region === '전체 지역' ? true : u.region === region))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .map((user) => ({ user, listing: null as Listing | null }))
+
+    return [...withListing, ...withoutListing]
   }, [state.listings, state.users, kind, region])
 
   return (
@@ -243,7 +262,8 @@ function Recommended({
   kind,
   onKind,
 }: {
-  mates: { user: import('@/lib/types').User; listing: import('@/lib/types').Listing }[]
+  /** listing 이 null 이면 아직 글이 없는 회원 */
+  mates: { user: import('@/lib/types').User; listing: Listing | null }[]
   kind: ListingKind | 'ALL'
   onKind: (k: ListingKind | 'ALL') => void
 }) {

@@ -9,8 +9,12 @@ import { GAMES, type Listing, type User } from '@/lib/types'
 
 /**
  * 추천 메이트 카드.
+ *
  * 모바일은 가로형(왼쪽 세로 사진 + 오른쪽 정보), PC는 세로 카드로 전환해
  * 사진이 카드 폭을 가득 채우게 한다. 같은 컴포넌트로 두 형태를 만든다.
+ *
+ * 글이 없는 회원도 같은 카드로 보여준다. 가입만 하고 아직 글을 안 쓴 사람이
+ * 아무 데도 안 보이면 서비스가 텅 비어 보인다.
  */
 export function MateRow({
   user,
@@ -19,18 +23,19 @@ export function MateRow({
   href,
 }: {
   user: User
-  listing: Listing
+  /** 아직 글이 없는 회원이면 null */
+  listing: Listing | null
   index?: number
   /** 기본은 메이트 프로필. 검색처럼 글이 주인공인 곳에서는 글로 보낸다 */
   href?: string
 }) {
   const rating = ratingAvg(user)
   // 언랭이어도 연결했으면 보여준다. 주 포지션과 자주 하는 챔피언만으로도 고를 거리가 된다.
-  const showRiot = listing.mainGame === 'lol' && Boolean(user.riot)
+  const showRiot = Boolean(user.riot) && (!listing || listing.mainGame === 'lol')
 
   return (
     <Link
-      href={href ?? `/users/${user.id}`}
+      href={listing ? (href ?? `/users/${user.id}`) : `/users/${user.id}`}
       className="rise flex items-stretch gap-3 overflow-hidden rounded-2xl bg-surface p-2.5 transition hover:bg-surface-2 active:scale-[0.99] md:flex-col md:gap-0 md:p-0"
       style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
     >
@@ -50,6 +55,7 @@ export function MateRow({
             <span className="text-online">온라인</span>
           </span>
         </div>
+
         {/* 롤이고 계정을 연결했으면 손으로 적은 티어 대신 실제 티어를 보여준다 */}
         {showRiot ? (
           <span className="mt-1 flex items-center gap-1.5">
@@ -59,10 +65,14 @@ export function MateRow({
           </span>
         ) : (
           <p className="mt-0.5 truncate text-xs text-muted md:text-[11px]">
-            {GAMES[listing.mainGame].short} · {listing.tier}
+            {listing ? `${GAMES[listing.mainGame].short} · ${listing.tier}` : user.region}
           </p>
         )}
-        <p className="mt-1 truncate text-xs text-dim md:text-[11px]">{listing.title}</p>
+
+        <p className="mt-1 truncate text-xs text-dim md:text-[11px]">
+          {listing ? listing.title : user.intro || '아직 올린 글이 없어요'}
+        </p>
+
         {showRiot && user.riot!.champions.length > 0 && (
           <span className="mt-1 hidden md:block">
             <ChampionList riot={user.riot!} />
@@ -78,18 +88,24 @@ export function MateRow({
             <span className="text-dim tabular-nums">({user.reviewCount})</span>
           )}
         </span>
-        <span className="text-sm font-bold text-brand-bright md:text-[13px]">
-          {listing.pricePerHour === 0 ? (
-            <span className="text-online">무료</span>
-          ) : (
-            <>
-              {won(listing.pricePerHour)}
-              <span className="text-[11px] font-medium text-dim">/시간</span>
-            </>
-          )}
-        </span>
+
+        {listing ? (
+          <span className="text-sm font-bold text-brand-bright md:text-[13px]">
+            {listing.pricePerHour === 0 ? (
+              <span className="text-online">무료</span>
+            ) : (
+              <>
+                {won(listing.pricePerHour)}
+                <span className="text-[11px] font-medium text-dim">/시간</span>
+              </>
+            )}
+          </span>
+        ) : (
+          <span className="text-[11px] font-medium text-dim">프로필 보기</span>
+        )}
+
         <div className="flex gap-1 md:hidden">
-          {listing.games.slice(0, 3).map((g) => (
+          {(listing?.games ?? []).slice(0, 3).map((g) => (
             <GameBadge key={g} game={g} />
           ))}
         </div>
