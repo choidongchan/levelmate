@@ -17,6 +17,7 @@ export function RiotLink({ me }: { me: User }) {
   const [gameName, setGameName] = useState('')
   const [tagLine, setTagLine] = useState('')
   const [busy, setBusy] = useState<'link' | 'sync' | 'verify' | 'unlink' | null>(null)
+  const [opened, setOpened] = useState(false)
   const [error, setError] = useState('')
   const [note, setNote] = useState('')
 
@@ -107,9 +108,36 @@ export function RiotLink({ me }: { me: User }) {
       {error && <p className="mt-3 text-xs text-[#f43f5e]">{error}</p>}
       {note && <p className="mt-3 text-xs text-online">{note}</p>}
 
-      {!riot.verified && riot.verifyCode && (
+      {/* 본인 확인은 선택이다. 안 해도 전적은 다 나온다. 펼쳐두면 꼭 해야 하는 것처럼 보인다. */}
+      {!riot.verified && riot.verifyCode && !opened && (
+        <button
+          type="button"
+          onClick={() => setOpened(true)}
+          className="mt-4 flex w-full items-center gap-2 rounded-2xl border border-line bg-surface px-4 py-3 text-left transition hover:bg-surface-2"
+        >
+          <Icon name="shield" className="size-3.5 shrink-0 text-dim" />
+          <span className="flex-1 text-[11px] leading-relaxed text-muted">
+            <b className="text-white">본인 인증 배지 받기 (선택)</b>
+            <br />
+            안 하셔도 티어와 전적은 그대로 나갑니다. 인증하면 &ldquo;본인 확인됨&rdquo; 표시가
+            붙어 더 잘 믿어줍니다.
+          </span>
+          <Icon name="chevronRight" className="size-4 shrink-0 text-dim" />
+        </button>
+      )}
+
+      {!riot.verified && riot.verifyCode && opened && (
         <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
-          <p className="text-xs font-bold">본인 계정인지 확인하기</p>
+          <div className="flex items-center gap-2">
+            <p className="flex-1 text-xs font-bold">본인 계정인지 확인하기</p>
+            <button
+              type="button"
+              onClick={() => setOpened(false)}
+              className="rounded-full bg-white/8 px-2.5 py-1 text-[10px] font-bold text-dim transition hover:bg-white/14"
+            >
+              접기
+            </button>
+          </div>
           <ol className="mt-2 flex list-decimal flex-col gap-1 pl-4 text-[11px] leading-relaxed text-muted">
             <li>리그 오브 레전드를 켠다</li>
             <li>
