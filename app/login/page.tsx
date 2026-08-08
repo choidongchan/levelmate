@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import { Icon } from '@/components/icon'
@@ -111,6 +112,19 @@ function LoginScreen() {
             >
               {busy ? '확인 중…' : '인증하고 시작하기'}
             </button>
+
+            {/* 가입은 동의를 받는 시점이다. 여기서 안 보여주면 동의를 받은 게 아니다. */}
+            <p className="px-1 text-center text-[11px] leading-relaxed text-dim">
+              시작하면{' '}
+              <Link href="/terms" className="font-bold text-muted underline underline-offset-2">
+                이용약관
+              </Link>
+              과{' '}
+              <Link href="/privacy" className="font-bold text-muted underline underline-offset-2">
+                개인정보처리방침
+              </Link>
+              에 동의하는 것으로 봅니다.
+            </p>
 
             <button
               type="button"

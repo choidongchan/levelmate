@@ -3,6 +3,7 @@ import './globals.css'
 import { BottomNav } from '@/components/bottom-nav'
 import { ServiceWorker } from '@/components/service-worker'
 import { SideNav } from '@/components/side-nav'
+import { SiteFooter } from '@/components/site-footer'
 import { StoreProvider } from '@/components/store-provider'
 import { safeSnapshot } from '@/lib/server/snapshot'
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/lib/site'
@@ -63,6 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <SideNav />
             <div className="relative flex min-h-dvh w-full max-w-md flex-col pb-28 md:max-w-none md:flex-1 md:pb-12">
               {children}
+              <SiteFooter />
             </div>
           </div>
           <BottomNav />
