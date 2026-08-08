@@ -7,6 +7,18 @@ import { Icon } from '@/components/icon'
 type Status = {
   riot: { set: boolean; source: 'env' | 'db' | null; masked: string | null }
   test?: { ok: boolean; message: string }
+  lookup?: {
+    ok: boolean
+    message?: string
+    name?: string
+    tier?: string
+    record?: string
+    lp?: number
+    mainRole?: string | null
+    champions?: string
+    kda?: string
+    canVerify?: boolean
+  }
 }
 
 /**
@@ -18,7 +30,8 @@ type Status = {
 export default function AdminSettingsPage() {
   const [status, setStatus] = useState<Status | null>(null)
   const [key, setKey] = useState('')
-  const [busy, setBusy] = useState<'save' | 'test' | null>(null)
+  const [lookup, setLookup] = useState('')
+  const [busy, setBusy] = useState<'save' | 'test' | 'lookup' | null>(null)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -36,7 +49,7 @@ export default function AdminSettingsPage() {
 
   const send = async (op: string, value?: string) => {
     setError('')
-    setBusy(op === 'saveRiotKey' ? 'save' : 'test')
+    setBusy(op === 'saveRiotKey' ? 'save' : op === 'lookupRiot' ? 'lookup' : 'test')
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
@@ -157,6 +170,61 @@ export default function AdminSettingsPage() {
                 </button>
               )}
             </div>
+          </div>
+        </Panel>
+
+        <Panel title="계정 조회 시험">
+          <div className="flex flex-col gap-3 py-1">
+            <p className="text-[11px] leading-relaxed text-muted">
+              아무 라이엇 계정이나 넣어 <b className="text-white">라이엇이 실제로 무엇을 주는지</b>{' '}
+              확인합니다. 저장하지 않고 누구에게도 붙이지 않습니다. 랭크가 있는 계정으로 해보면
+              티어가 제대로 나오는지 알 수 있습니다.
+            </p>
+
+            <div className="flex gap-2">
+              <input
+                value={lookup}
+                onChange={(e) => setLookup(e.target.value)}
+                placeholder="이름#태그 (예: 개미마왕#KR1)"
+                autoComplete="off"
+                className="min-w-0 flex-1 rounded-xl bg-white/6 px-3.5 py-2.5 text-xs outline-none placeholder:text-dim"
+              />
+              <button
+                type="button"
+                disabled={!lookup.includes('#') || busy !== null}
+                onClick={() => send('lookupRiot', lookup)}
+                className="shrink-0 rounded-xl bg-white/8 px-4 py-2.5 text-xs font-bold transition hover:bg-white/14 disabled:opacity-40"
+              >
+                {busy === 'lookup' ? '조회 중…' : '조회'}
+              </button>
+            </div>
+
+            {status?.lookup &&
+              (status.lookup.ok ? (
+                <dl className="grid grid-cols-[5rem_1fr] gap-x-3 gap-y-1.5 rounded-xl bg-white/5 px-3.5 py-3 text-[11px]">
+                  <dt className="text-dim">계정</dt>
+                  <dd className="font-bold">{status.lookup.name}</dd>
+                  <dt className="text-dim">솔로랭크</dt>
+                  <dd className="font-bold">
+                    {status.lookup.tier}
+                    {status.lookup.lp ? ` ${status.lookup.lp}LP` : ''} · {status.lookup.record}
+                  </dd>
+                  <dt className="text-dim">주 포지션</dt>
+                  <dd>{status.lookup.mainRole ?? '판별 못함'}</dd>
+                  <dt className="text-dim">챔피언</dt>
+                  <dd>{status.lookup.champions}</dd>
+                  <dt className="text-dim">평균 KDA</dt>
+                  <dd>{status.lookup.kda}</dd>
+                  <dt className="text-dim">본인 인증</dt>
+                  <dd className={status.lookup.canVerify ? 'text-online' : 'text-[#fbbf24]'}>
+                    {status.lookup.canVerify ? '가능' : '불가 (라이엇이 소환사 ID를 안 줌)'}
+                  </dd>
+                </dl>
+              ) : (
+                <p className="rounded-xl bg-[#f43f5e]/10 px-3.5 py-2.5 text-[11px] text-[#f43f5e]">
+                  {status.lookup.message}
+                </p>
+              ))}
           </div>
         </Panel>
 
