@@ -18,7 +18,14 @@ export type NexonGame = 'fconline' | 'maple'
 export const SYNC_COOLDOWN_MS = 10 * 60 * 1000
 const TIMEOUT_MS = 8000
 
-export class NexonError extends Error {}
+export class NexonError extends Error {
+  /** 넥슨이 실제로 뭐라고 답했는지. 관리자 화면에서만 보여준다. */
+  detail?: string
+  constructor(message: string, detail?: string) {
+    super(message)
+    this.detail = detail
+  }
+}
 
 const SLOT: Record<NexonGame, { setting: string; env: string; label: string }> = {
   fconline: { setting: NEXON_FC_KEY, env: 'NEXON_FCONLINE_API_KEY', label: 'FC 온라인' },
@@ -56,37 +63,49 @@ async function ask<T>(game: NexonGame, path: string): Promise<T | null> {
     clearTimeout(timer)
   }
 
-  // 넥슨은 "그런 캐릭터 없음"도 400 으로 준다. 본문의 이름표로 갈라낸다.
-  if (res.status === 400 || res.status === 404) {
-    const name = await errorName(res)
-    if (name === 'OPENAPI00004' || res.status === 404) return null
-    if (name === 'OPENAPI00007') {
-      throw new NexonError('요청이 몰리고 있습니다. 잠시 뒤 다시 시도해주세요.')
-    }
-    return null
+  if (res.ok) return (await res.json()) as T
+
+  // 넥슨은 실패를 대부분 400 으로 주고, 무엇이 틀렸는지는 본문의 이름표에 있다.
+  const { name, message } = await errorBody(res)
+  const detail = `HTTP ${res.status}${name ? ` ${name}` : ''}${message ? ` — ${message}` : ''}`
+  const label = SLOT[game].label
+
+  switch (name) {
+    // 그런 계정이 없다. 잘못이 아니므로 조용히 빈손으로 돌아간다.
+    case 'OPENAPI00003':
+    case 'OPENAPI00004':
+      return null
+    case 'OPENAPI00002':
+    case 'OPENAPI00005':
+      console.error('[nexon] 키 문제', detail, path)
+      throw new NexonError(`${label} 키가 잘못되었습니다. 관리자 화면에서 확인해주세요.`, detail)
+    // 이 애플리케이션이 부를 수 없는 주소. 키가 아니라 이쪽 잘못이다.
+    case 'OPENAPI00006':
+      console.error('[nexon] 주소 문제', detail, path)
+      throw new NexonError(`${label} 연동 주소가 맞지 않습니다. 관리자에게 알려주세요.`, detail)
+    case 'OPENAPI00007':
+      throw new NexonError('요청이 몰리고 있습니다. 잠시 뒤 다시 시도해주세요.', detail)
+    case 'OPENAPI00009':
+      throw new NexonError('넥슨이 아직 자료를 준비하고 있습니다. 잠시 뒤 다시 해주세요.', detail)
+    case 'OPENAPI00010':
+      throw new NexonError('넥슨이 점검 중입니다. 점검이 끝나면 다시 됩니다.', detail)
   }
+
   if (res.status === 401 || res.status === 403) {
-    console.error('[nexon] 키 문제', res.status, path)
-    throw new NexonError(
-      `${SLOT[game].label} 키가 잘못되었습니다. 관리자 화면에서 확인해주세요.`,
-    )
+    console.error('[nexon] 키 문제', detail, path)
+    throw new NexonError(`${label} 키가 잘못되었습니다. 관리자 화면에서 확인해주세요.`, detail)
   }
-  if (res.status === 429) {
-    throw new NexonError('요청이 몰리고 있습니다. 잠시 뒤 다시 시도해주세요.')
-  }
-  if (!res.ok) {
-    console.error('[nexon]', res.status, path)
-    throw new NexonError('넥슨에서 정보를 가져오지 못했습니다.')
-  }
-  return (await res.json()) as T
+  if (res.status === 404) return null
+  console.error('[nexon]', detail, path)
+  throw new NexonError('넥슨에서 정보를 가져오지 못했습니다.', detail)
 }
 
-async function errorName(res: Response): Promise<string | null> {
+async function errorBody(res: Response): Promise<{ name: string | null; message: string | null }> {
   try {
-    const body = (await res.json()) as { error?: { name?: string } }
-    return body?.error?.name ?? null
+    const body = (await res.json()) as { error?: { name?: string; message?: string } }
+    return { name: body?.error?.name ?? null, message: body?.error?.message ?? null }
   } catch {
-    return null
+    return { name: null, message: null }
   }
 }
 
@@ -115,16 +134,19 @@ export async function lookupFconline(nickname: string) {
  */
 let divisionNames: Map<number, string> | null = null
 
-async function divisionName(id: number): Promise<string | null> {
+async function divisionName(id: number): Promise<string> {
   if (!divisionNames) {
+    // 이름표를 못 받아도 연결은 되어야 한다. 그때는 번호를 그대로 보여준다.
     const rows = await ask<{ divisionId: number; divisionName: string }[]>(
       'fconline',
       '/static/fconline/meta/division',
-    )
-    if (!rows) return null
-    divisionNames = new Map(rows.map((r) => [r.divisionId, r.divisionName]))
+    ).catch((err) => {
+      console.error('[nexon] 등급 이름표를 못 받았다', err)
+      return null
+    })
+    if (rows) divisionNames = new Map(rows.map((r) => [r.divisionId, r.divisionName]))
   }
-  return divisionNames.get(id) ?? null
+  return divisionNames?.get(id) ?? `디비전 ${id}`
 }
 
 export async function fconlineStats(ouid: string): Promise<GameStats> {
@@ -212,12 +234,21 @@ export async function nexonKeyStatus(game: NexonGame) {
  * 게임마다 키가 다르므로 그 게임의 값싼 주소를 하나씩 부른다.
  */
 export async function checkNexonKey(game: NexonGame): Promise<{ ok: boolean; message: string }> {
+  // 실제로 쓰는 주소로 확인한다. 없는 계정을 물어보면 "그런 계정 없음" 이 돌아오고,
+  // 키나 권한이 잘못됐을 때만 다른 답이 온다.
+  const probe = '%EB%A0%88%EB%B2%A8%EB%A9%94%EC%9D%B4%ED%8A%B8%ED%99%95%EC%9D%B8'
+  const path =
+    game === 'fconline'
+      ? `/fconline/v1/id?nickname=${probe}`
+      : `/maplestory/v1/id?character_name=${probe}`
   try {
-    if (game === 'fconline') await ask<unknown>('fconline', '/static/fconline/meta/division')
-    // 메이플은 값싼 표가 따로 없다. 없는 캐릭터를 물어보면 키가 틀렸을 때만 다르게 답한다.
-    else await ask<unknown>('maple', '/maplestory/v1/id?character_name=%EB%A0%88%EB%B2%A8%EB%A9%94%EC%9D%B4%ED%8A%B8%ED%99%95%EC%9D%B8')
+    await ask<unknown>(game, path)
     return { ok: true, message: '넥슨 서버와 정상적으로 통신했습니다.' }
   } catch (err) {
-    return { ok: false, message: err instanceof NexonError ? err.message : '확인하지 못했습니다.' }
+    if (err instanceof NexonError) {
+      // 관리자만 보는 화면이다. 넥슨이 뭐라고 했는지 그대로 보여줘야 고칠 수 있다.
+      return { ok: false, message: err.detail ? `${err.message} (${err.detail})` : err.message }
+    }
+    return { ok: false, message: '확인하지 못했습니다.' }
   }
 }

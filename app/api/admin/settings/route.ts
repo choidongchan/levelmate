@@ -264,7 +264,12 @@ export async function POST(req: Request) {
         return Response.json({ error: '알 수 없는 요청입니다' }, { status: 400 })
     }
   } catch (err) {
-    if (err instanceof RiotError || err instanceof PubgError || err instanceof NexonError) {
+    // 관리자만 보는 화면이라, 넥슨이 실제로 뭐라고 했는지까지 그대로 넘긴다.
+    if (err instanceof NexonError) {
+      const error = err.detail ? `${err.message} (${err.detail})` : err.message
+      return Response.json({ error }, { status: 400 })
+    }
+    if (err instanceof RiotError || err instanceof PubgError) {
       return Response.json({ error: err.message }, { status: 400 })
     }
     console.error('[api/admin/settings]', body.op, err)
