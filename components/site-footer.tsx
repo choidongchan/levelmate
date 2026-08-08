@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { companyLines } from '@/lib/legal'
+import { COMPANY, companyLines } from '@/lib/legal'
 import { SITE_NAME } from '@/lib/site'
 
 /**
@@ -28,6 +28,8 @@ export function SiteFooter() {
           </div>
         ))}
       </dl>
+
+      <p className="mt-2">문의 가능 시간 {COMPANY.csHours}</p>
 
       <p className="mt-3 leading-relaxed">
         {SITE_NAME}은 통신판매중개자이며 회원 간 거래의 당사자가 아닙니다. 회원 간에 이루어진 게임

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Items, LegalPage, Section, Table } from '@/components/legal-doc'
-import { COMPANY, EFFECTIVE_DATE, fill, PRIVACY_OFFICER } from '@/lib/legal'
+import { COMPANY, contact, EFFECTIVE_DATE, fill, PRIVACY_OFFICER } from '@/lib/legal'
 import { SITE_NAME } from '@/lib/site'
 
 export const metadata: Metadata = {
@@ -200,6 +200,8 @@ export default function PrivacyPage() {
           사업자등록번호 {fill(COMPANY.bizNo)} · 통신판매업신고 {fill(COMPANY.mailOrderNo)}
           <br />
           {fill(COMPANY.address)}
+          <br />
+          문의 {contact()}
         </p>
         <Link href="/terms" className="mt-1 font-bold text-brand-bright">
           이용약관 보기 →

@@ -12,24 +12,31 @@ export const COMPANY = {
   /** 상호 */
   name: '주식회사 오버클론',
   /** 대표자 성명 */
-  ceo: '',
+  ceo: '최동찬',
   /** 사업자등록번호 */
-  bizNo: '',
+  bizNo: '358-81-03695',
   /** 통신판매업 신고번호 */
-  mailOrderNo: '',
+  mailOrderNo: '제 2025-서울광진-0364호',
   /** 사업장 주소 */
-  address: '',
+  address: '04918 서울특별시 광진구 긴고랑로14길 11-10 (중곡동) 지층',
   /** 고객 문의 이메일 */
-  email: '',
+  email: 'eastchan@naver.com',
   /** 고객 문의 전화 */
-  tel: '',
+  tel: '0502-1911-3355',
+  /** 사업자 대표 전화 */
+  repTel: '010-5737-6949',
+  /** 문의를 받는 시간 */
+  csHours: '평일 10:00~17:00 (점심 12:00~13:00) · 주말·공휴일 휴무',
 } as const
 
-/** 개인정보 보호책임자. 법이 이름과 연락처를 밝히도록 하고 있다. */
+/**
+ * 개인정보 보호책임자.
+ * 법이 회사가 아니라 사람의 이름과 연락처를 밝히도록 하고 있다.
+ */
 export const PRIVACY_OFFICER = {
-  name: '',
+  name: '최동찬',
   title: '대표',
-  email: '',
+  email: 'eastchan@naver.com',
 } as const
 
 /** 약관·처리방침 시행일. 고칠 때마다 함께 올린다. */
@@ -50,6 +57,12 @@ export function companyLines() {
     ['사업자등록번호', fill(COMPANY.bizNo)],
     ['통신판매업신고', fill(COMPANY.mailOrderNo)],
     ['주소', fill(COMPANY.address)],
-    ['문의', [COMPANY.email, COMPANY.tel].filter(Boolean).join(' · ') || BLANK],
+    ['대표전화', fill(COMPANY.repTel)],
+    ['문의', contact()],
   ] as const
+}
+
+/** 고객이 연락할 곳. 대표 개인 번호가 아니라 상담 창구를 먼저 보여준다. */
+export function contact() {
+  return [COMPANY.tel, COMPANY.email].filter(Boolean).join(' · ') || BLANK
 }

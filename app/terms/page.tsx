@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Article, Items, LegalPage } from '@/components/legal-doc'
-import { COMPANY, EFFECTIVE_DATE, fill } from '@/lib/legal'
+import { COMPANY, contact, EFFECTIVE_DATE, fill } from '@/lib/legal'
 import { FEE_RATE } from '@/lib/types'
 import { SITE_NAME } from '@/lib/site'
 
@@ -205,7 +205,7 @@ export default function TermsPage() {
           <br />
           {fill(COMPANY.address)}
           <br />
-          문의 {[COMPANY.email, COMPANY.tel].filter(Boolean).join(' · ') || fill('')}
+          문의 {contact()} · {COMPANY.csHours}
         </p>
         <Link href="/privacy" className="mt-1 font-bold text-brand-bright">
           개인정보처리방침 보기 →
