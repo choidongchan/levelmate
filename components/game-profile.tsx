@@ -1,3 +1,4 @@
+import { ChampionIcon, crestRank, hasRoleIcon, RoleIcon, TierCrest } from './game-art'
 import { Icon } from './icon'
 import { gameProfiles, type GameProfileView } from '@/lib/game-profile'
 import type { User } from '@/lib/types'
@@ -41,6 +42,7 @@ export function GameChip({ game }: { game: GameProfileView }) {
       style={{ background: `${game.tierColor}1f` }}
       title={`${game.gameName} ${game.tier ?? ''} · ${game.account}`}
     >
+      <TierCrest color={game.tierColor} rank={crestRank(game.tier)} className="size-3.5" />
       <span
         className="shrink-0 rounded-[3px] px-1 font-black"
         style={{ background: `${game.gameColor}33`, color: game.gameColor }}
@@ -62,9 +64,17 @@ export function GameChip({ game }: { game: GameProfileView }) {
  * 한 줄에 늘어놓는다. 고르는 사람은 이 줄만 훑고 넘어간다. 여러 게임을
  * 하는 사람은 줄이 여러 개가 되고, 그게 이 서비스의 강점이다.
  */
-export function GameLine({ game, want }: { game: GameProfileView; want?: string[] }) {
+export function GameLine({
+  game,
+  want,
+}: {
+  game: GameProfileView
+  want?: { key: string; label: string }[]
+}) {
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-none">
+      <TierCrest color={game.tierColor} rank={crestRank(game.tier)} className="size-5" />
+
       <span
         className="shrink-0 rounded-[3px] px-1 py-0.5 text-[10px] font-black"
         style={{ background: `${game.gameColor}2b`, color: game.gameColor }}
@@ -78,12 +88,24 @@ export function GameLine({ game, want }: { game: GameProfileView; want?: string[
       {game.verified && <Icon name="check" className="size-3 shrink-0 text-online" />}
 
       {game.role && (
-        <span className="shrink-0 rounded bg-white/8 px-1.5 py-0.5 text-dim">{game.role}</span>
+        <span className="flex shrink-0 items-center gap-1 rounded bg-white/8 px-1.5 py-0.5 text-dim">
+          {hasRoleIcon(game.roleKey) && <RoleIcon role={game.roleKey!} className="size-3" />}
+          {game.role}
+        </span>
       )}
 
       {want && want.length > 0 && (
-        <span className="shrink-0 text-dim">
-          찾는 자리 <b className="text-muted">{want.join('·')}</b>
+        <span className="flex shrink-0 items-center gap-1 text-dim">
+          찾는 자리
+          {want.map((w) => (
+            <span
+              key={w.label}
+              className="flex items-center gap-0.5 rounded bg-brand/15 px-1.5 py-0.5 font-bold text-brand-bright"
+            >
+              {hasRoleIcon(w.key) && <RoleIcon role={w.key} className="size-3" />}
+              {w.label}
+            </span>
+          ))}
         </span>
       )}
 
@@ -110,12 +132,11 @@ export function GameLine({ game, want }: { game: GameProfileView; want?: string[
       ))}
 
       {game.picks.slice(0, 3).map((p) => (
-        <span
-          key={p.name}
-          className="shrink-0 rounded bg-white/6 px-1 py-0.5 whitespace-nowrap"
-          title={`${p.games}판`}
-        >
-          {p.name} <b className={p.rate >= 55 ? 'text-[#f43f5e]' : 'text-dim'}>{p.rate}%</b>
+        <span key={p.name} className="flex shrink-0 items-center gap-1">
+          <ChampionIcon name={p.name} size={20} />
+          <b className={`tabular-nums ${p.rate >= 55 ? 'text-[#f43f5e]' : 'text-dim'}`}>
+            {p.rate}%
+          </b>
         </span>
       ))}
     </div>
@@ -203,14 +224,22 @@ export function GameProfileCard({ game }: { game: GameProfileView }) {
         </header>
 
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-          <div className="min-w-0">
-            <p
-              className="text-xl leading-none font-black tracking-tight"
-              style={{ color: game.tierColor }}
-            >
-              {game.tier ?? '언랭'}
-            </p>
-            {game.detail && <p className="mt-1.5 text-[11px] text-dim">{game.detail}</p>}
+          <div className="flex min-w-0 items-center gap-3">
+            {/* 등급 문장을 크게. 글자만 있으면 눈에 안 들어온다. */}
+            <TierCrest
+              color={game.tierColor}
+              rank={crestRank(game.tier)}
+              className="size-11"
+            />
+            <div className="min-w-0">
+              <p
+                className="text-xl leading-none font-black tracking-tight"
+                style={{ color: game.tierColor }}
+              >
+                {game.tier ?? '언랭'}
+              </p>
+              {game.detail && <p className="mt-1.5 text-[11px] text-dim">{game.detail}</p>}
+            </div>
           </div>
 
           {game.record && (
@@ -226,9 +255,14 @@ export function GameProfileCard({ game }: { game: GameProfileView }) {
         {(game.role || game.stats.length > 0) && (
           <dl className="flex flex-wrap gap-x-4 gap-y-1.5 border-t border-line pt-3">
             {game.role && (
-              <div className="flex gap-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5 text-[11px]">
                 <dt className="text-dim">주 포지션</dt>
-                <dd className="font-bold">{game.role}</dd>
+                <dd className="flex items-center gap-1 font-bold">
+                  {hasRoleIcon(game.roleKey) && (
+                    <RoleIcon role={game.roleKey!} className="size-3.5 text-brand-bright" />
+                  )}
+                  {game.role}
+                </dd>
               </div>
             )}
             {game.stats.map((s) => (
@@ -248,10 +282,10 @@ export function GameProfileCard({ game }: { game: GameProfileView }) {
             {game.picks.map((p) => (
               <span
                 key={p.name}
-                className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] whitespace-nowrap"
+                className="flex items-center gap-1 rounded-md bg-white/6 py-0.5 pr-2 pl-0.5 text-[10px] whitespace-nowrap"
                 title={`${p.games}판`}
               >
-                {p.name}{' '}
+                <ChampionIcon name={p.name} size={24} />
                 <b className={p.rate >= 55 ? 'text-[#f43f5e]' : 'text-dim'}>{p.rate}%</b>
               </span>
             ))}

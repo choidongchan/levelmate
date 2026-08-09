@@ -118,3 +118,18 @@ export function kdaRatio(p: { kills: number; deaths: number; assists: number }):
   if (p.deaths === 0) return null
   return Math.round(((p.kills + p.assists) / p.deaths) * 100) / 100
 }
+
+/**
+ * 챔피언 얼굴 그림 주소 (라이엇 Data Dragon).
+ *
+ * 라이엇 경기 기록이 주는 championName 이 그대로 파일 이름이라 바로 쓴다.
+ * 판 번호는 챔피언 그림이 잘 안 바뀌어 하나로 고정해 두었다. 새로 나온
+ * 챔피언이라 그림이 없으면 화면에서 이름 글자로 되돌아간다.
+ */
+const DDRAGON_VERSION = process.env.NEXT_PUBLIC_DDRAGON_VERSION || '15.1.1'
+
+export function championIcon(name: string): string | null {
+  const key = name.replace(/[^A-Za-z0-9]/g, '')
+  if (!key) return null
+  return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VERSION}/img/champion/${key}.png`
+}

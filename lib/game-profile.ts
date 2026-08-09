@@ -30,6 +30,8 @@ export type GameProfileView = {
   detail: string | null
   /** 주로 서는 자리 */
   role: string | null
+  /** 자리 아이콘을 고르기 위한 열쇠 (TOP, MID …) */
+  roleKey: string | null
   /** 본인 확인까지 마쳤는지 (지금은 라이엇만 가능) */
   verified: boolean
   /**
@@ -102,6 +104,7 @@ export function gameProfiles(user: User): GameProfileView[] {
       tierColor: tierTone(tier, GAMES.lol.color),
       detail: riot.lp ? `${riot.lp} LP` : null,
       role: riot.mainRole ? LOL_ROLES[riot.mainRole].label : null,
+      roleKey: riot.mainRole ?? null,
       verified: riot.verified,
       record: rate === null ? null : { rate, wins: riot.wins, losses: riot.losses },
       stats: [
@@ -138,6 +141,7 @@ export function gameProfiles(user: User): GameProfileView[] {
       tierColor: tierTone(g.tier, meta.color),
       detail: g.detail,
       role: null,
+      roleKey: null,
       // 라이엇 말고는 본인 확인 수단이 없다. 있는 척하지 않는다.
       verified: false,
       record: null,

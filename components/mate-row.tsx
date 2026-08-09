@@ -46,7 +46,9 @@ export function MateRow({
 
   // 이 글에서 찾는 자리. 글의 게임 줄에만 붙인다.
   const want = listing
-    ? listing.wantRoles.map((r) => roleLabel(listing.mainGame, r)).filter((r): r is string => !!r)
+    ? listing.wantRoles
+        .map((r) => ({ key: r, label: roleLabel(listing.mainGame, r) }))
+        .filter((r): r is { key: string; label: string } => !!r.label)
     : []
 
   const price = listing ? (
@@ -194,7 +196,7 @@ function SelfReported({
 }: {
   listing: Listing | null
   region: string
-  want: string[]
+  want: { key: string; label: string }[]
 }) {
   if (!listing) return <p className="truncate text-xs text-muted">{region}</p>
 
@@ -206,8 +208,13 @@ function SelfReported({
       </span>
       {mine && <span className="rounded bg-white/8 px-1 py-0.5 text-[10px] text-dim">{mine}</span>}
       {want.length > 0 && (
-        <span className="text-[11px] text-dim">
-          찾는 자리 <b className="text-muted">{want.join('·')}</b>
+        <span className="flex items-center gap-1 text-[11px] text-dim">
+          찾는 자리
+          {want.map((w) => (
+            <span key={w.key} className="rounded bg-brand/15 px-1.5 py-0.5 font-bold text-brand-bright">
+              {w.label}
+            </span>
+          ))}
         </span>
       )}
     </p>
