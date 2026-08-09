@@ -6,6 +6,7 @@ import {
   d3Stats,
   lookupD3,
   lookupWow,
+  resetBlizzardToken,
   wowStats,
 } from '@/lib/server/blizzard'
 import {
@@ -200,6 +201,8 @@ export async function POST(req: Request) {
           )
         }
         await setSetting(op === 'saveBlizzardId' ? BLIZZARD_ID : BLIZZARD_SECRET, value || null)
+        // 옛 출입증이 남아 있으면 새 키가 틀려도 정상으로 보인다
+        resetBlizzardToken()
         const now = await blizzardKeyStatus()
         // 둘 다 있어야 확인할 수 있다. 하나만 넣은 상태에서는 조용히 넘어간다.
         const test = now.set

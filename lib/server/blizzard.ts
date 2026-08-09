@@ -52,6 +52,15 @@ export async function blizzardKeyStatus() {
 
 let token: { value: string; until: number } | null = null
 
+/**
+ * 담아둔 출입증을 버린다.
+ * 아이디나 비밀키를 바꾸면 옛 출입증이 하루 동안 살아 있어서, 잘못된 키를
+ * 넣어도 "정상" 이라고 나온다. 바꾸는 쪽에서 이걸 불러줘야 한다.
+ */
+export function resetBlizzardToken() {
+  token = null
+}
+
 async function accessToken(): Promise<string> {
   if (token && Date.now() < token.until) return token.value
 
@@ -212,6 +221,17 @@ export async function wowStats(externalId: string, name: string): Promise<Blizza
 
 // ─────────────────────────── 디아블로 3 ───────────────────────────
 
+/** 블리자드가 직업을 영문 표식으로 준다. 그대로 두면 "demon-hunter" 가 나온다. */
+const D3_CLASS_KO: Record<string, string> = {
+  barbarian: '야만용사',
+  crusader: '성전사',
+  'demon-hunter': '악마사냥꾼',
+  monk: '수도사',
+  necromancer: '강령술사',
+  'witch-doctor': '부두술사',
+  wizard: '마법사',
+}
+
 export async function lookupD3(battleTag: string) {
   const tag = battleTag.trim().replace('#', '-')
   if (!/^.+-\d{3,}$/.test(tag)) return null
@@ -232,18 +252,19 @@ export async function d3Stats(externalId: string): Promise<BlizzardStats> {
   if (!p) return { tier: null, detail: null, stats: null }
 
   const best = (p.heroes ?? []).sort((a, b) => (b.level ?? 0) - (a.level ?? 0))[0]
+  const job = best?.class ? (D3_CLASS_KO[best.class] ?? best.class) : null
   const paragon = p.paragonLevelSeason || p.paragonLevel || 0
 
   return {
     tier: paragon ? `파라곤 ${paragon.toLocaleString('ko-KR')}` : null,
     detail:
-      [best?.class ? `${best.class}` : null, p.guildName || null, `영웅 ${(p.heroes ?? []).length}명`]
+      [job, p.guildName || null, `영웅 ${(p.heroes ?? []).length}명`]
         .filter(Boolean)
         .join(' · ') || null,
     stats: {
       paragon,
       heroes: (p.heroes ?? []).length,
-      job: best?.class ?? '',
+      job: job ?? '',
     },
   }
 }
