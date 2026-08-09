@@ -55,6 +55,73 @@ export function GameChip({ game }: { game: GameProfileView }) {
   )
 }
 
+/**
+ * 목록형에서 게임 하나를 한 줄로 촘촘하게.
+ *
+ * op.gg 듀오 찾기처럼 티어·주 포지션·찾는 포지션·선호 챔피언·승률·KDA 를
+ * 한 줄에 늘어놓는다. 고르는 사람은 이 줄만 훑고 넘어간다. 여러 게임을
+ * 하는 사람은 줄이 여러 개가 되고, 그게 이 서비스의 강점이다.
+ */
+export function GameLine({ game, want }: { game: GameProfileView; want?: string[] }) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[11px] leading-none">
+      <span
+        className="shrink-0 rounded-[3px] px-1 py-0.5 text-[10px] font-black"
+        style={{ background: `${game.gameColor}2b`, color: game.gameColor }}
+      >
+        {game.gameShort}
+      </span>
+
+      <b className="shrink-0" style={{ color: game.tierColor }}>
+        {game.tier ?? '언랭'}
+      </b>
+      {game.verified && <Icon name="check" className="size-3 shrink-0 text-online" />}
+
+      {game.role && (
+        <span className="shrink-0 rounded bg-white/8 px-1.5 py-0.5 text-dim">{game.role}</span>
+      )}
+
+      {want && want.length > 0 && (
+        <span className="shrink-0 text-dim">
+          찾는 자리 <b className="text-muted">{want.join('·')}</b>
+        </span>
+      )}
+
+      {game.record && (
+        <span className="flex shrink-0 items-center gap-1.5">
+          {/* 막대는 좁게 고정하고, 승·패 숫자는 잘리지 않게 흐르는 대로 둔다 */}
+          <span className="flex h-1.5 w-16 overflow-hidden rounded-full bg-[#f43f5e]/40">
+            <span className="h-full bg-[#3b82f6]" style={{ width: `${game.record.rate}%` }} />
+          </span>
+          <b className={`tabular-nums ${game.record.rate >= 55 ? 'text-[#f43f5e]' : ''}`}>
+            {game.record.rate}%
+          </b>
+          <span className="whitespace-nowrap tabular-nums text-dim">
+            {game.record.wins}승 {game.record.losses}패
+          </span>
+        </span>
+      )}
+
+      {game.stats.slice(0, 3).map((s) => (
+        <span key={s.label} className="shrink-0 text-dim">
+          {s.label}{' '}
+          <b className={`tabular-nums ${s.hot ? 'text-[#f43f5e]' : 'text-muted'}`}>{s.value}</b>
+        </span>
+      ))}
+
+      {game.picks.slice(0, 3).map((p) => (
+        <span
+          key={p.name}
+          className="shrink-0 rounded bg-white/6 px-1 py-0.5 whitespace-nowrap"
+          title={`${p.games}판`}
+        >
+          {p.name} <b className={p.rate >= 55 ? 'text-[#f43f5e]' : 'text-dim'}>{p.rate}%</b>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 /** 승/패 막대. op.gg 처럼 이긴 쪽이 파랑, 진 쪽이 빨강. */
 export function WinBar({
   record,
